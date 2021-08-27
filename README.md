@@ -4,7 +4,7 @@ Fast search for local files and directories.
 # Usage
 
 ```
-$ gocate init /
+$ gocate -init /path/to/index/root
 $ gocate -i "ls"
 ```
 

@@ -1,16 +1,32 @@
+// Run
+// $ go test -v
 package main
 
 import (
 	"fmt"
 	"os/exec"
-	"strings"
 )
 
 func main() {
-	b, _ := exec.Command("locate", "-i", "-d", "./test/usr.db", "bin").Output()
-	out := strings.Split(string(b), "\n")
-	for _, o := range out {
-		fmt.Printf("%s\n", o)
-	}
-	fmt.Printf("Length %d", len(out))
+	// nothing to do
+}
+
+func locateBin() {
+	b, _ := exec.Command("locate", "-i", "-d", "./test/bin.db", "ls").Output()
+	fmt.Printf("%v", string(b))
+}
+
+func locateUsr() {
+	b, _ := exec.Command("locate", "-i", "-d", "./test/usr.db", "ing.hpp").Output()
+	fmt.Printf("%v", string(b))
+}
+
+func normalLocate() {
+	locateUsr()
+	locateBin()
+}
+
+func parallelLocate() {
+	go locateUsr()
+	go locateBin()
 }
