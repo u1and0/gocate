@@ -11,5 +11,5 @@ func TestNormalLocate(t *testing.T) {
 
 func TestParallelLocate(t *testing.T) {
 	parallelLocate()
-	time.Sleep(4 * time.Millisecond)
+	time.Sleep(9 * time.Millisecond)
 }
