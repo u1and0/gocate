@@ -3,10 +3,10 @@
 package main
 
 import (
-	"fmt"
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Opt : locate command options
@@ -32,29 +32,40 @@ func main() {
 func Locate(o Opt, wg *sync.WaitGroup) {
 	b, _ := exec.Command("locate", "-i", "-d", o.Dir, o.Word).Output()
 	out := strings.Split(string(b), "\n")
-	for _, o := range out {
-		// time.Sleep(1 * time.Microsecond)
-		fmt.Println(o)
+	for range out {
+		time.Sleep(1 * time.Microsecond)
+		// fmt.Println(o)
 	}
 	wg.Done() // カウンタを減算
 }
 
-/* Nomral locate command for benchmark
+// Nomral locate command for benchmark
 func locateBin0() {
 	b, _ := exec.Command("locate", "-i", "-d", "./test/bin.db", "ls").Output()
 	out := strings.Split(string(b), "\n")
-	for _, o := range out {
+	for range out {
 		time.Sleep(1 * time.Microsecond)
-		fmt.Printf("%s\n", o)
+		// fmt.Printf("%s\n", o)
 	}
 }
 
 func locateUsr0() {
 	b, _ := exec.Command("locate", "-i", "-d", "./test/usr.db", "ing.hpp").Output()
 	out := strings.Split(string(b), "\n")
-	for _, o := range out {
+	for range out {
 		time.Sleep(1 * time.Microsecond)
-		fmt.Printf("%s\n", o)
+		// fmt.Printf("%s\n", o)
 	}
 }
+
+/*
+$ go test -bench .
+goos: linux
+goarch: amd64
+pkg: speedtest/src/github.com/u1and0/gocate
+cpu: Intel(R) Core(TM) i5-8400 CPU @ 2.80GHz
+BenchmarkNormalLocate-6               38          32892696 ns/op
+BenchmarkParallelLocate-6             42          28137809 ns/op
+PASS
+ok      speedtest/src/github.com/u1and0/gocate  2.506s
 */
