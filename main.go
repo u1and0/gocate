@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	"os/exec"
 	"strings"
 	"sync"
@@ -15,13 +16,14 @@ type Opt struct {
 	Word string
 }
 
+var opts = []Opt{
+	{"./test/bin.db", "ls"},
+	{"./test/usr.db", "ing.hpp"},
+}
+
 func main() {
 	var wg sync.WaitGroup // カウンタを宣言
 	wg.Add(2)             // カウンタの初期化
-	opts := []Opt{
-		{"./test/bin.db", "ls"},
-		{"./test/usr.db", "ing.hpp"},
-	}
 	for _, o := range opts {
 		go Locate(o, &wg)
 	}
@@ -32,29 +34,29 @@ func main() {
 func Locate(o Opt, wg *sync.WaitGroup) {
 	b, _ := exec.Command("locate", "-i", "-d", o.Dir, o.Word).Output()
 	out := strings.Split(string(b), "\n")
-	for range out {
+	for _, o := range out {
 		time.Sleep(1 * time.Microsecond)
-		// fmt.Println(o)
+		fmt.Println(o)
 	}
 	wg.Done() // カウンタを減算
 }
 
 // Nomral locate command for benchmark
 func locateBin0() {
-	b, _ := exec.Command("locate", "-i", "-d", "./test/bin.db", "ls").Output()
+	b, _ := exec.Command("locate", "-i", "-d", opts[0].Dir, opts[0].Word).Output()
 	out := strings.Split(string(b), "\n")
-	for range out {
+	for _, o := range out {
 		time.Sleep(1 * time.Microsecond)
-		// fmt.Printf("%s\n", o)
+		fmt.Println(o)
 	}
 }
 
 func locateUsr0() {
-	b, _ := exec.Command("locate", "-i", "-d", "./test/usr.db", "ing.hpp").Output()
+	b, _ := exec.Command("locate", "-i", "-d", opts[1].Dir, opts[1].Word).Output()
 	out := strings.Split(string(b), "\n")
-	for range out {
+	for _, o := range out {
 		time.Sleep(1 * time.Microsecond)
-		// fmt.Printf("%s\n", o)
+		fmt.Println(o)
 	}
 }
 
