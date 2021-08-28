@@ -2,14 +2,17 @@ package main
 
 import (
 	"testing"
-	"time"
 )
 
-func TestNormalLocate(t *testing.T) {
-	normalLocate()
+func BenchmarkNormalLocate(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		locateBin0()
+		locateUsr0()
+	}
 }
 
-func TestParallelLocate(t *testing.T) {
-	parallelLocate()
-	time.Sleep(9 * time.Millisecond)
+func BenchmarkParallelLocate(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		main()
+	}
 }
