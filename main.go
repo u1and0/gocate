@@ -1,9 +1,12 @@
-// Run
-// $ go test -v
+// Usage:
+//		gocate [-d path] [--database=path] [--version] [--help] pattern...
+// For benchmark test, const BENCH turns true then run below
+//		$ go test -bench
 package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -11,16 +14,18 @@ import (
 	"sync"
 )
 
-// Opt : locate command options
-type Opt struct {
-	Dir  string
-	Word string
-}
-
 const (
-	opts  string = "./test/var.db:./test/etc.db:./test/usr.db"
-	word  string = ".*pacman.*proto"
-	bench bool   = true
+	// BENCH : Benchmark test flag
+	BENCH bool = false
+	// VERSION : Show version flag
+	VERSION string = "v0.1.0"
+)
+
+var (
+	showVersion bool
+	// for normalLocate test default value
+	db   string = "./test/var.db:./test/etc.db:./test/usr.db"
+	word string = ".*pacman.*proto"
 )
 
 func receiver(ch <-chan string) {
@@ -29,7 +34,7 @@ func receiver(ch <-chan string) {
 		if !ok {
 			break
 		}
-		if bench {
+		if BENCH {
 			continue
 		}
 		fmt.Println(s)
@@ -37,12 +42,25 @@ func receiver(ch <-chan string) {
 }
 
 func main() {
+	// Read option
+	flag.BoolVar(&showVersion, "v", false, "Show version")
+	flag.BoolVar(&showVersion, "version", false, "Show version")
+	flag.Parse()
+	if showVersion {
+		fmt.Println("gocate version:", VERSION)
+		return // Exit with version info
+	}
+
+	db = os.Getenv("LOCATE_PATH")
+	word = strings.Join(flag.Args(), ".*")
+
+	// Run goroutine
 	var wg sync.WaitGroup // カウンタを宣言
 	c := make(chan string)
 	defer close(c) // main関数終了時にチャネル終了
 
 	go receiver(c)
-	for _, o := range strings.Split(opts, ":") {
+	for _, o := range strings.Split(db, ":") {
 		wg.Add(1) // カウンタの追加
 		go func(o string) {
 			defer wg.Done() // go func抜けるときにカウンタを減算
@@ -69,10 +87,10 @@ func main() {
 
 // Nomral locate command for benchmark
 func normalLocate() {
-	b, _ := exec.Command("locate", "-i", "-d", opts, "--regex", word).Output()
+	b, _ := exec.Command("locate", "-i", "-d", db, "--regex", word).Output()
 	out := strings.Split(string(b), "\n")
 	for _, o := range out {
-		if bench {
+		if BENCH {
 			continue
 		}
 		fmt.Println(o)
