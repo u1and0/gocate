@@ -3,7 +3,6 @@
 package main
 
 import (
-	"fmt"
 	"os/exec"
 	"strings"
 	"sync"
@@ -16,20 +15,18 @@ type Opt struct {
 	Word string
 }
 
-var opts = []Opt{
-	{"./test/bin.db", "fstab"},
-	{"./test/var.db", "fstab"},
-	{"./test/etc.db", "fstab"},
-	{"./test/usr.db", "fstab"},
-}
+const (
+	opts string = "./test/bin.db:./test/var.db:./test/etc.db:./test/usr.db"
+	word string = "fstab"
+)
 
 func receiver(ch <-chan string) {
 	for {
-		s, ok := <-ch
+		_, ok := <-ch
 		if ok == false {
 			break
 		}
-		fmt.Println(s)
+		// fmt.Println(s)
 	}
 }
 
@@ -39,17 +36,16 @@ func main() {
 	defer close(c) // main関数終了時にチャネル終了
 
 	go receiver(c)
-	for _, o := range opts {
+	for _, o := range strings.Split(opts, ":") {
 		wg.Add(1) // カウンタの初期化
-		go func(o Opt) {
-			b, _ := exec.Command("locate", "-i", "-d", o.Dir, "--regex", o.Word).Output()
+		go func(o string) {
+			b, _ := exec.Command("locate", "-i", "-d", o, "--regex", word).Output()
 			out := strings.Split(string(b), "\n")
-			for _, o := range out {
-				if o == "" {
+			for _, s := range out {
+				if s == "" {
 					break
 				}
-				c <- o
-				time.Sleep(1 * time.Millisecond)
+				c <- s
 			}
 			wg.Done() // カウンタを減算
 		}(o)
@@ -70,11 +66,24 @@ func main() {
 
 // Nomral locate command for benchmark
 func normalLocate() {
-	for _, o := range opts {
-		b, _ := exec.Command("locate", "-i", "-d", o.Dir, o.Word).Output()
-		out := strings.Split(string(b), "\n")
-		for _, o := range out {
-			fmt.Println(o)
-		}
+	b, _ := exec.Command("locate", "-i", "-d", opts, word).Output()
+	out := strings.Split(string(b), "\n")
+	for range out {
+		// fmt.Println(o)
+		time.Sleep(1 * time.Microsecond)
 	}
 }
+
+/*
+$ go test -bench .
+goos: linux
+goarch: amd64
+pkg: speedtest/src/github.com/u1and0/gocate
+cpu: Intel(R) Core(TM) i5-8400 CPU @ 2.80GHz
+BenchmarkNormalLocate-6               44          28034939 ns/op
+BenchmarkParallelLocate-6             20          67518023 ns/op
+PASS
+ok      speedtest/src/github.com/u1and0/gocate  2.683s
+
+普通のlocateの方が3倍早い
+*/
