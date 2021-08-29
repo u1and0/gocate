@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -16,8 +17,10 @@ type Opt struct {
 }
 
 var opts = []Opt{
-	{"./test/bin.db", "ls"},
-	{"./test/usr.db", "ing.hpp"},
+	{"./test/bin.db", "fstab"},
+	{"./test/var.db", "fstab"},
+	{"./test/etc.db", "fstab"},
+	{"./test/usr.db", "fstab"},
 }
 
 func receiver(ch <-chan string) {
@@ -31,32 +34,27 @@ func receiver(ch <-chan string) {
 }
 
 func main() {
-	// var wg sync.WaitGroup // カウンタを宣言
-	// wg.Add(2)             // カウンタの初期化
+	var wg sync.WaitGroup // カウンタを宣言
 	c := make(chan string)
 	defer close(c) // main関数終了時にチャネル終了
 
 	go receiver(c)
 	for _, o := range opts {
+		wg.Add(1) // カウンタの初期化
 		go func(o Opt) {
-			b, _ := exec.Command("locate", "-i", "-d", o.Dir, o.Word).Output()
+			b, _ := exec.Command("locate", "-i", "-d", o.Dir, "--regex", o.Word).Output()
 			out := strings.Split(string(b), "\n")
 			for _, o := range out {
 				if o == "" {
 					break
 				}
 				c <- o
-				// fmt.Println(o)
 				time.Sleep(1 * time.Millisecond)
 			}
-			// wg.Done() // カウンタを減算
-			// close(c)
-			// locate終了時にクローズすると、
-			// 二回以上クローズするのでパニック
+			wg.Done() // カウンタを減算
 		}(o)
-		// wg.Wait() // カウンタが0になるまでブロック
+		wg.Wait() // カウンタが0になるまでブロック
 	}
-	time.Sleep(3 * time.Second) // ゴルーチン完了待ちのため待機
 }
 
 // // Locate excutes locate command
