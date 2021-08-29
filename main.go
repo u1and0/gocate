@@ -1,5 +1,8 @@
+// Bug
+//		Wirte stdout to same result 3 times
 // Usage:
 //		gocate [-d path] [--database=path] [--version] [--help] pattern...
+//		$ LOCATE_PATH=$(find test -name '*.db' | paste -sd:) go run main.go pacman proto
 // For benchmark test, const BENCH turns true then run below
 //		$ go test -bench
 package main
@@ -63,6 +66,7 @@ func main() {
 	for _, o := range strings.Split(db, ":") {
 		wg.Add(1) // カウンタの追加
 		go func(o string) {
+			fmt.Printf("===search %s===\n", o)
 			defer wg.Done() // go func抜けるときにカウンタを減算
 			cmd := exec.Command("locate", "-i", "-d", o, "--regex", word)
 			stdout, err := cmd.StdoutPipe()
