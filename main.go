@@ -3,10 +3,10 @@
 package main
 
 import (
+	"fmt"
 	"os/exec"
 	"strings"
 	"sync"
-	"time"
 )
 
 // Opt : locate command options
@@ -16,17 +16,21 @@ type Opt struct {
 }
 
 const (
-	opts string = "./test/bin.db:./test/var.db:./test/etc.db:./test/usr.db"
-	word string = "fstab"
+	opts  string = "./test/bin.db:./test/var.db:./test/etc.db:./test/usr.db"
+	word  string = "bin"
+	bench bool   = false
 )
 
 func receiver(ch <-chan string) {
 	for {
-		_, ok := <-ch
+		s, ok := <-ch
 		if ok == false {
 			break
 		}
-		// fmt.Println(s)
+		if bench {
+			continue
+		}
+		fmt.Println(s)
 	}
 }
 
@@ -68,9 +72,11 @@ func main() {
 func normalLocate() {
 	b, _ := exec.Command("locate", "-i", "-d", opts, word).Output()
 	out := strings.Split(string(b), "\n")
-	for range out {
-		// fmt.Println(o)
-		time.Sleep(1 * time.Microsecond)
+	for _, o := range out {
+		if bench {
+			continue
+		}
+		fmt.Println(o)
 	}
 }
 
