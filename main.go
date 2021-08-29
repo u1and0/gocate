@@ -19,7 +19,7 @@ type Opt struct {
 
 const (
 	opts  string = "./test/var.db:./test/etc.db:./test/usr.db"
-	word  string = "pacman"
+	word  string = ".*pacman.*proto"
 	bench bool   = true
 )
 
@@ -58,6 +58,7 @@ func main() {
 
 			for scanner.Scan() {
 				if s := scanner.Text(); s != "" {
+					// time.Sleep(1 * time.Millisecond)  // [test]順序守らないことのマーカー
 					c <- s
 				}
 			}
@@ -66,20 +67,9 @@ func main() {
 	wg.Wait() // カウンタが0になるまでブロック
 }
 
-// // Locate excutes locate command
-// func Locate(o Opt, wg *sync.WaitGroup) {
-// 	b, _ := exec.Command("locate", "-i", "-d", o.Dir, o.Word).Output()
-// 	out := strings.Split(string(b), "\n")
-// 	for _, o := range out {
-// 		time.Sleep(1 * time.Microsecond)
-// 		fmt.Println(o)
-// 	}
-// 	wg.Done() // カウンタを減算
-// }
-
 // Nomral locate command for benchmark
 func normalLocate() {
-	b, _ := exec.Command("locate", "-i", "-d", opts, word).Output()
+	b, _ := exec.Command("locate", "-i", "-d", opts, "--regex", word).Output()
 	out := strings.Split(string(b), "\n")
 	for _, o := range out {
 		if bench {
@@ -91,14 +81,16 @@ func normalLocate() {
 
 /*
 $ go test -bench .
-goos: linux
+goos: linuxbench .
 goarch: amd64
 pkg: speedtest/src/github.com/u1and0/gocate
 cpu: Intel(R) Core(TM) i5-8400 CPU @ 2.80GHz
-BenchmarkNormalLocate-6               56          21427959 ns/op
-BenchmarkParallelLocate-6             37          33087714 ns/op
+BenchmarkNormalLocate-6               13          89004938 ns/op
+BenchmarkParallelLocate-6             12          88001858 ns/op
 PASS
-ok      speedtest/src/github.com/u1and0/gocate  2.482s
+ok      speedtest/src/github.com/u1and0/gocate  2.401s
 
-普通のlocateの方が1.5倍速いまでに近づいた
+
+普通のlocateより1msecくらい勝つようになった
+normalLocateのほうに--regexオプションがないからだった
 */
