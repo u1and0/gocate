@@ -3,10 +3,13 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Opt : locate command options
@@ -16,15 +19,15 @@ type Opt struct {
 }
 
 const (
-	opts  string = "./test/bin.db:./test/var.db:./test/etc.db:./test/usr.db"
-	word  string = "bin"
+	opts  string = "./test/var.db:./test/etc.db:./test/usr.db"
+	word  string = "pacman"
 	bench bool   = false
 )
 
 func receiver(ch <-chan string) {
 	for {
 		s, ok := <-ch
-		if ok == false {
+		if !ok {
 			break
 		}
 		if bench {
@@ -41,20 +44,30 @@ func main() {
 
 	go receiver(c)
 	for _, o := range strings.Split(opts, ":") {
-		wg.Add(1) // カウンタの初期化
+		wg.Add(1) // カウンタの追加
 		go func(o string) {
-			b, _ := exec.Command("locate", "-i", "-d", o, "--regex", word).Output()
-			out := strings.Split(string(b), "\n")
-			for _, s := range out {
-				if s == "" {
-					break
-				}
-				c <- s
+			defer wg.Done() // go func抜けるときにカウンタを減算
+			cmd := exec.Command("locate", "-i", "-d", o, "--regex", word)
+			stdout, err := cmd.StdoutPipe()
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
 			}
-			wg.Done() // カウンタを減算
+			cmd.Start()
+
+			scanner := bufio.NewScanner(stdout)
+
+			for scanner.Scan() {
+				if s := scanner.Text(); s != "" {
+					time.Sleep(1 * time.Millisecond)
+					// 処理がgoroutineにより順序守らないことを見るためのマーカー
+					c <- s
+				}
+			}
+			fmt.Println("EOF")
 		}(o)
-		wg.Wait() // カウンタが0になるまでブロック
 	}
+	wg.Wait() // カウンタが0になるまでブロック
 }
 
 // // Locate excutes locate command
