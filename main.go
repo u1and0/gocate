@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
-	"time"
 )
 
 // Opt : locate command options
@@ -21,7 +20,7 @@ type Opt struct {
 const (
 	opts  string = "./test/var.db:./test/etc.db:./test/usr.db"
 	word  string = "pacman"
-	bench bool   = false
+	bench bool   = true
 )
 
 func receiver(ch <-chan string) {
@@ -59,12 +58,9 @@ func main() {
 
 			for scanner.Scan() {
 				if s := scanner.Text(); s != "" {
-					time.Sleep(1 * time.Millisecond)
-					// 処理がgoroutineにより順序守らないことを見るためのマーカー
 					c <- s
 				}
 			}
-			fmt.Println("EOF")
 		}(o)
 	}
 	wg.Wait() // カウンタが0になるまでブロック
@@ -99,10 +95,10 @@ goos: linux
 goarch: amd64
 pkg: speedtest/src/github.com/u1and0/gocate
 cpu: Intel(R) Core(TM) i5-8400 CPU @ 2.80GHz
-BenchmarkNormalLocate-6               44          28034939 ns/op
-BenchmarkParallelLocate-6             20          67518023 ns/op
+BenchmarkNormalLocate-6               56          21427959 ns/op
+BenchmarkParallelLocate-6             37          33087714 ns/op
 PASS
-ok      speedtest/src/github.com/u1and0/gocate  2.683s
+ok      speedtest/src/github.com/u1and0/gocate  2.482s
 
-普通のlocateの方が3倍早い
+普通のlocateの方が1.5倍速いまでに近づいた
 */
