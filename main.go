@@ -22,6 +22,8 @@ const (
 	BENCH bool = false
 	// VERSION : Show version flag
 	VERSION string = "v0.1.0"
+	// DEFAULTDB : Default locate search path
+	DEFAULTDB string = "/var/lib/mlocate/mlocate.db"
 )
 
 var (
@@ -55,30 +57,47 @@ func main() {
 	// Read option
 	flag.BoolVar(&showVersion, "v", false, "Show version")
 	flag.BoolVar(&showVersion, "version", false, "Show version")
-	flag.StringVar(&db, "d", "", "database path")
-	flag.StringVar(&db, "database", "", "database path")
+	flag.StringVar(&db, "d", "", "Path of locate database file (ex: /path/something.db:/path/another.db)")
+	flag.StringVar(&db, "database", "", "Path of locate database file (ex: /path/something.db:/path/another.db)")
+	flag.Usage = func() {
+		usageTxt := `parallel find files by name
+
+Usage of gocate
+	gocate [OPTION]... PATTERN...
+
+-v, -version
+	Show version
+-d, -database string
+	Path of locate database file (ex: /path/something.db:/path/another.db)
+-- [OPTION]...
+	locate command option`
+		fmt.Fprintf(os.Stderr, "%s\n", usageTxt)
+	}
 	flag.Parse()
 	if showVersion {
 		fmt.Println("gocate version:", VERSION)
 		return // Exit with version info
 	}
+	word = flag.Args() // options + search word
 
-	if db == "" {
-		db = os.Getenv("LOCATE_PATH")
-	}
-	// 2重検索を止めるためにLOCATE_PATHを空にする
-	if err := os.Setenv("LOCATE_PATH", ""); err != nil {
-		panic(err)
-	}
-	// 終了時にLOCATE_PATHを戻して終了
-	defer func() {
-		if err := os.Setenv("LOCATE_PATH", db); err != nil {
-			panic(err)
+	// db 優先順位
+	// -d PATH > LOCATE_PATH > /var/lib/mlocate/mlocate.db
+	if db == "" { // -d option が設定されなかったら
+		if db = os.Getenv("LOCATE_PATH"); db == "" { // LOCATE_PATHをdbとする
+			db = DEFAULTDB // LOCATE_PATH も設定されなかったら DEFAULTDBとする
+		} else { // LOCATE_PATHが設定されていたら
+			// 2重検索を止めるためにLOCATE_PATHを空にする
+			if err := os.Setenv("LOCATE_PATH", ""); err != nil {
+				panic(err)
+			}
+			// 終了時にLOCATE_PATHを戻して終了
+			defer func() {
+				if err := os.Setenv("LOCATE_PATH", db); err != nil {
+					panic(err)
+				}
+			}()
 		}
-	}()
-
-	// 検索ワード
-	word = flag.Args()
+	}
 
 	// Run goroutine
 	var wg sync.WaitGroup // カウンタを宣言
@@ -92,8 +111,7 @@ func main() {
 			defer wg.Done() // go func抜けるときにカウンタを減算
 
 			// locate command option read after -- from command line
-			opt := []string{"-d", o}
-			opt = append(opt, word...)
+			opt := append([]string{"-d", o}, word...)
 			cmd := exec.Command("locate", opt...)
 			stdout, err := cmd.StdoutPipe()
 			if err != nil {
