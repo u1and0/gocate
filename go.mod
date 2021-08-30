@@ -1,3 +1,3 @@
-module github.com/u1and0/gocate
+module gocate
 
 go 1.17
