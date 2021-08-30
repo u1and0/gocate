@@ -27,6 +27,9 @@ const (
 )
 
 var (
+	// locate command path
+	exe         string
+	err         error
 	showVersion bool
 	// for normalLocate test default value
 	db string
@@ -54,6 +57,11 @@ func receiver(ch <-chan string) {
 }
 
 func main() {
+	// Check locate command
+	if exe, err = exec.LookPath("locate"); err != nil {
+		panic(err)
+	}
+
 	// Read option
 	flag.BoolVar(&showVersion, "v", false, "Show version")
 	flag.BoolVar(&showVersion, "version", false, "Show version")
@@ -112,7 +120,7 @@ Usage of gocate
 
 			// locate command option read after -- from command line
 			opt := append([]string{"-d", o}, word...)
-			cmd := exec.Command("locate", opt...)
+			cmd := exec.Command(exe, opt...)
 			stdout, err := cmd.StdoutPipe()
 			if err != nil {
 				fmt.Println(err)
