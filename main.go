@@ -55,7 +55,19 @@ func main() {
 	}
 
 	db = os.Getenv("LOCATE_PATH")
-	word = strings.Join(flag.Args(), ".*")
+	// 2重検索を止めるためにLOCATE_PATHを空にする
+	if err := os.Setenv("LOCATE_PATH", ""); err != nil {
+		panic(err)
+	}
+	// 終了時にLOCATE_PATHを戻して終了
+	defer func() {
+		if err := os.Setenv("LOCATE_PATH", db); err != nil {
+			panic(err)
+		}
+	}()
+
+	// 検索ワード
+	word = strings.Join(flag.Args(), " ")
 
 	// Run goroutine
 	var wg sync.WaitGroup // カウンタを宣言
@@ -66,7 +78,6 @@ func main() {
 	for _, o := range strings.Split(db, ":") {
 		wg.Add(1) // カウンタの追加
 		go func(o string) {
-			fmt.Printf("===search %s===\n", o)
 			defer wg.Done() // go func抜けるときにカウンタを減算
 			cmd := exec.Command("locate", "-i", "-d", o, "--regex", word)
 			stdout, err := cmd.StdoutPipe()
@@ -100,19 +111,3 @@ func normalLocate() {
 		fmt.Println(o)
 	}
 }
-
-/*
-$ go test -bench .
-goos: linuxbench .
-goarch: amd64
-pkg: speedtest/src/github.com/u1and0/gocate
-cpu: Intel(R) Core(TM) i5-8400 CPU @ 2.80GHz
-BenchmarkNormalLocate-6               13          89004938 ns/op
-BenchmarkParallelLocate-6             12          88001858 ns/op
-PASS
-ok      speedtest/src/github.com/u1and0/gocate  2.401s
-
-
-普通のlocateより1msecくらい勝つようになった
-normalLocateのほうに--regexオプションがないからだった
-*/
