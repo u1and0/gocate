@@ -1,8 +1,8 @@
-// Bug
-//		Wirte stdout to same result 3 times
+// Build:
+// $ go build
 // Usage:
-//		gocate [-d path] [--database=path] [--version] [--help] pattern...
-//		$ LOCATE_PATH=$(find test -name '*.db' | paste -sd:) go run main.go pacman proto
+//		gocate [-d path] [--database=path] [--version] [--help] PATTERN... -- [LOCATE OPTION]
+//		$ ./gocate -d $(find test -name '*.db' | paste -sd:) -- -i --regex fstab
 // For benchmark test, const BENCH turns true then run below
 //		$ go test -bench
 package main
