@@ -27,8 +27,15 @@ const (
 var (
 	showVersion bool
 	// for normalLocate test default value
-	db   string = "./test/var.db:./test/etc.db:./test/usr.db"
-	word string = ".*pacman.*proto"
+	db string
+	// word for test
+	word = []string{
+		"-i",
+		"-d",
+		"./test/var.db:./test/etc.db:./test/usr.db",
+		"--regex",
+		".*pacman.*proto",
+	}
 )
 
 func receiver(ch <-chan string) {
@@ -48,13 +55,17 @@ func main() {
 	// Read option
 	flag.BoolVar(&showVersion, "v", false, "Show version")
 	flag.BoolVar(&showVersion, "version", false, "Show version")
+	flag.StringVar(&db, "d", "", "database path")
+	flag.StringVar(&db, "database", "", "database path")
 	flag.Parse()
 	if showVersion {
 		fmt.Println("gocate version:", VERSION)
 		return // Exit with version info
 	}
 
-	db = os.Getenv("LOCATE_PATH")
+	if db == "" {
+		db = os.Getenv("LOCATE_PATH")
+	}
 	// 2重検索を止めるためにLOCATE_PATHを空にする
 	if err := os.Setenv("LOCATE_PATH", ""); err != nil {
 		panic(err)
@@ -67,7 +78,7 @@ func main() {
 	}()
 
 	// 検索ワード
-	word = strings.Join(flag.Args(), " ")
+	word = flag.Args()
 
 	// Run goroutine
 	var wg sync.WaitGroup // カウンタを宣言
@@ -79,7 +90,11 @@ func main() {
 		wg.Add(1) // カウンタの追加
 		go func(o string) {
 			defer wg.Done() // go func抜けるときにカウンタを減算
-			cmd := exec.Command("locate", "-i", "-d", o, "--regex", word)
+
+			// locate command option read after -- from command line
+			opt := []string{"-d", o}
+			opt = append(opt, word...)
+			cmd := exec.Command("locate", opt...)
 			stdout, err := cmd.StdoutPipe()
 			if err != nil {
 				fmt.Println(err)
@@ -102,7 +117,7 @@ func main() {
 
 // Nomral locate command for benchmark
 func normalLocate() {
-	b, _ := exec.Command("locate", "-i", "-d", db, "--regex", word).Output()
+	b, _ := exec.Command("locate", word...).Output()
 	out := strings.Split(string(b), "\n")
 	for _, o := range out {
 		if BENCH {
