@@ -16,7 +16,6 @@ const (
 // Command : Command executer
 type Command struct {
 	Exe  string   // /usr/bin/locate
-	Dir  string   // -d option
 	Args []string // search keyword
 	Wg   sync.WaitGroup
 }
@@ -36,11 +35,11 @@ func Receiver(ch <-chan string) {
 }
 
 // Exec : locate command executer
-func (c *Command) Exec(ch chan string) {
+func (c *Command) Exec(dir string, ch chan string) {
 	defer c.Wg.Done() // go func抜けるときにカウンタを減算
 
 	// locate command option read after -- from command line
-	opt := append([]string{"-d", c.Dir}, c.Args...)
+	opt := append([]string{"-d", dir}, c.Args...)
 	command := exec.Command(c.Exe, opt...)
 	stdout, err := command.StdoutPipe()
 	if err != nil {

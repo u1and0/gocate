@@ -41,8 +41,7 @@ func TestMain(t *testing.T) {
 	}
 	for _, d := range dd {
 		com.Wg.Add(1)
-		com.Dir = d
-		go com.Exec(c)
+		go com.Exec(d, c)
 	}
 	com.Wg.Wait()
 }

@@ -98,9 +98,8 @@ func main() {
 
 	go cmd.Receiver(c)
 	for _, d := range strings.Split(db, ":") {
-		com.Wg.Add(1) // カウンタの追加
-		com.Dir = d
-		go com.Exec(c)
+		com.Wg.Add(1) // カウンタの追加はExec()の外でないとすぐ終わる
+		go com.Exec(d, c)
 	}
 	com.Wg.Wait() // カウンタが0になるまでブロック
 }
