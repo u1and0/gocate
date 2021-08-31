@@ -1,7 +1,13 @@
 package cmd
 
-import "fmt"
+import (
+	"fmt"
+	"io/fs"
+)
 
-func main() {
-	fmt.Println("vim-go")
+func (c *Command) Updatedb(d fs.FileInfo) {
+	defer c.Wg.Done()
+	if d.IsDir() {
+		fmt.Println(d.Name())
+	}
 }

@@ -10,6 +10,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -34,7 +35,7 @@ var (
 	// for normalLocate test default value
 	db  string
 	err error
-	// word for test
+	up  bool
 )
 
 func readOpt() []string {
@@ -42,6 +43,7 @@ func readOpt() []string {
 	flag.BoolVar(&showVersion, "version", false, "Show version")
 	flag.StringVar(&db, "d", "", "Path of locate database file (ex: /path/something.db:/path/another.db)")
 	flag.StringVar(&db, "database", "", "Path of locate database file (ex: /path/something.db:/path/another.db)")
+	flag.BoolVar(&up, "init", false, "updatedb mode")
 	flag.Usage = func() {
 		usageTxt := `parallel find files by name
 
@@ -52,6 +54,8 @@ Usage of gocate
 	Show version
 -d, -database string
 	Path of locate database file (ex: /path/something.db:/path/another.db)
+-init
+	updatedb mode
 -- [OPTION]...
 	locate command option`
 		fmt.Fprintf(os.Stderr, "%s\n", usageTxt)
@@ -92,7 +96,21 @@ func main() {
 		}
 	}
 
-	// Run goroutine
+	// Run updatedb
+	if up {
+		dirs, err := ioutil.ReadDir(db)
+		if err != nil {
+			panic(err)
+		}
+		for _, d := range dirs {
+			com.Wg.Add(1)
+			go com.Updatedb(d)
+		}
+		com.Wg.Wait()
+		return
+	}
+
+	// Run locate
 	c := make(chan string)
 	defer close(c) // main関数終了時にチャネル終了
 
