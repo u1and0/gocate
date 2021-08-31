@@ -8,61 +8,36 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 	"sync"
+
+	cmd "gocate/cmd"
 )
 
 const (
 	// BENCH : Benchmark test flag
 	BENCH bool = false
 	// VERSION : Show version flag
-	VERSION string = "v0.1.0"
+	VERSION string = "v0.1.1r"
 	// DEFAULTDB : Default locate search path
 	DEFAULTDB string = "/var/lib/mlocate/mlocate.db"
 )
 
 var (
+	com cmd.Command
 	// locate command path
-	exe         string
-	err         error
 	showVersion bool
 	// for normalLocate test default value
-	db string
+	db  string
+	err error
 	// word for test
-	word = []string{
-		"-i",
-		"-d",
-		"./test/var.db:./test/etc.db:./test/usr.db",
-		"--regex",
-		".*pacman.*proto",
-	}
 )
 
-func receiver(ch <-chan string) {
-	for {
-		s, ok := <-ch
-		if !ok {
-			break
-		}
-		if BENCH {
-			continue
-		}
-		fmt.Println(s)
-	}
-}
-
-func main() {
-	// Check locate command
-	if exe, err = exec.LookPath("locate"); err != nil {
-		panic(err)
-	}
-
-	// Read option
+func readOpt() []string {
 	flag.BoolVar(&showVersion, "v", false, "Show version")
 	flag.BoolVar(&showVersion, "version", false, "Show version")
 	flag.StringVar(&db, "d", "", "Path of locate database file (ex: /path/something.db:/path/another.db)")
@@ -84,9 +59,19 @@ Usage of gocate
 	flag.Parse()
 	if showVersion {
 		fmt.Println("gocate version:", VERSION)
-		return // Exit with version info
+		os.Exit(0) // Exit with version info
 	}
-	word = flag.Args() // options + search word
+	return flag.Args() // options + search word
+}
+
+func main() {
+	// Check locate command
+	com.Exe, err = exec.LookPath("locate")
+	if err != nil {
+		panic(err)
+	}
+	com.Args = readOpt()
+	com.Wg = sync.WaitGroup{} // カウンタを宣言
 
 	// db 優先順位
 	// -d PATH > LOCATE_PATH > /var/lib/mlocate/mlocate.db
@@ -108,42 +93,21 @@ Usage of gocate
 	}
 
 	// Run goroutine
-	var wg sync.WaitGroup // カウンタを宣言
 	c := make(chan string)
 	defer close(c) // main関数終了時にチャネル終了
 
-	go receiver(c)
-	for _, o := range strings.Split(db, ":") {
-		wg.Add(1) // カウンタの追加
-		go func(o string) {
-			defer wg.Done() // go func抜けるときにカウンタを減算
-
-			// locate command option read after -- from command line
-			opt := append([]string{"-d", o}, word...)
-			cmd := exec.Command(exe, opt...)
-			stdout, err := cmd.StdoutPipe()
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-			}
-			cmd.Start()
-
-			scanner := bufio.NewScanner(stdout)
-
-			for scanner.Scan() {
-				if s := scanner.Text(); s != "" {
-					// time.Sleep(1 * time.Millisecond)  // [test]順序守らないことのマーカー
-					c <- s
-				}
-			}
-		}(o)
+	go cmd.Receiver(c)
+	for _, d := range strings.Split(db, ":") {
+		com.Wg.Add(1) // カウンタの追加
+		com.Dir = d
+		go com.Exec(c)
 	}
-	wg.Wait() // カウンタが0になるまでブロック
+	com.Wg.Wait() // カウンタが0になるまでブロック
 }
 
 // Nomral locate command for benchmark
-func normalLocate() {
-	b, _ := exec.Command("locate", word...).Output()
+func normalLocate(args []string) {
+	b, _ := exec.Command("locate", args...).Output()
 	out := strings.Split(string(b), "\n")
 	for _, o := range out {
 		if BENCH {
