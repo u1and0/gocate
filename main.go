@@ -33,15 +33,42 @@ var (
 	// locate command path
 	showVersion bool
 	// for normalLocate test default value
-	db  string
+	db  arrayField
 	err error
 	up  bool
 )
 
+type arrayField []string
+
+// arrayField.String sets multiple -f flag
+func (i *arrayField) String() string {
+	// change this, this is just can example to satisfy the interface
+	return "my string representation"
+}
+
+// arrayField.Set sets multiple -f flag
+func (i *arrayField) Set(value string) error {
+	*i = append(*i, strings.TrimSpace(value))
+	return nil
+}
+
+// db に:が含まれていたら、分割して[]stringに格納
+func (sa *arrayField) splitCollon() (sb arrayField) {
+	for _, s := range sa {
+		if strings.Contains(s, ":") {
+			sa := strings.Split(s, ":")
+			dbpath = append(sb, da...)
+		} else {
+			dbpath = append(sb, d)
+		}
+	}
+	return
+}
+
 func readOpt() []string {
 	flag.BoolVar(&showVersion, "v", false, "Show version")
 	flag.BoolVar(&showVersion, "version", false, "Show version")
-	flag.StringVar(&db, "d", "", "Path of locate database file (ex: /path/something.db:/path/another.db)")
+	flag.Var(&db, "d", "", "Path of locate database file (ex: /path/something.db:/path/another.db)")
 	flag.StringVar(&db, "database", "", "Path of locate database file (ex: /path/something.db:/path/another.db)")
 	flag.BoolVar(&up, "init", false, "updatedb mode")
 	flag.Usage = func() {
@@ -79,9 +106,10 @@ func main() {
 
 	// db 優先順位
 	// -d PATH > LOCATE_PATH > /var/lib/mlocate/mlocate.db
-	if db == "" { // -d option が設定されなかったら
-		if db = os.Getenv("LOCATE_PATH"); db == "" { // LOCATE_PATHをdbとする
-			db = DEFAULTDB // LOCATE_PATH も設定されなかったら DEFAULTDBとする
+	if len(db) < 1 { // -d option が設定されなかったら
+		db = arrayField{os.Getenv("LOCATE_PATH")}
+		if len(db) < 1 { // LOCATE_PATHをdbとする
+			db = arrayField{DEFAULTDB} // LOCATE_PATH も設定されなかったら DEFAULTDBとする
 		} else { // LOCATE_PATHが設定されていたら
 			// 2重検索を止めるためにLOCATE_PATHを空にする
 			if err := os.Setenv("LOCATE_PATH", ""); err != nil {
@@ -89,24 +117,28 @@ func main() {
 			}
 			// 終了時にLOCATE_PATHを戻して終了
 			defer func() {
-				if err := os.Setenv("LOCATE_PATH", db); err != nil {
+				if err := os.Setenv("LOCATE_PATH", db[0]); err != nil {
 					panic(err)
 				}
 			}()
 		}
 	}
 
+	db = db.splitCollon()
+
 	// Run updatedb
 	if up {
-		dirs, err := ioutil.ReadDir(db)
-		if err != nil {
-			panic(err)
+		for _, d := range db {
+			dirs, err := ioutil.ReadDir(d)
+			if err != nil {
+				panic(err)
+			}
+			for _, d := range dirs {
+				com.Wg.Add(1)
+				go com.Updatedb(db, d)
+			}
+			com.Wg.Wait()
 		}
-		for _, d := range dirs {
-			com.Wg.Add(1)
-			go com.Updatedb(db, d)
-		}
-		com.Wg.Wait()
 		return
 	}
 
