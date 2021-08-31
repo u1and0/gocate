@@ -104,7 +104,7 @@ func main() {
 		}
 		for _, d := range dirs {
 			com.Wg.Add(1)
-			go com.Updatedb(d)
+			go com.Updatedb(db, d)
 		}
 		com.Wg.Wait()
 		return
