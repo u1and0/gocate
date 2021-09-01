@@ -3,23 +3,23 @@ package cmd
 import (
 	"fmt"
 	"io/fs"
-	"os"
 	"os/exec"
 )
 
-func (c *Command) Updatedb(root string, d fs.FileInfo) {
+func (c *Command) Updatedb(root string, f fs.FileInfo) error {
 	defer c.Wg.Done()
-	if d.IsDir() {
-		cur, _ := os.Getwd()
-		opt := []string{
-			"-U",
-			fmt.Sprintf("%s/%s", root, d.Name()),
-			"--output",
-			fmt.Sprintf("%s/%s/%s.db", cur, ".gocate", d.Name()),
-			// `pwd`/.gocate is temp directory
-		}
-		command := exec.Command("updatedb", opt...)
-		fmt.Println(command)
-		command.Run()
+	if !f.IsDir() {
+		return fmt.Errorf("do not must be included file %s", f.Name())
 	}
+	opt := []string{
+		"-U",
+		fmt.Sprintf("%s/%s", root, f.Name()),
+		"--output",
+		fmt.Sprintf("%s/%s.db", c.Gocatedbpath, f.Name()),
+		// `pwd`/.gocate is temp directory
+	}
+	command := exec.Command("updatedb", opt...)
+	fmt.Println(command)
+	// command.Run()
+	return nil
 }

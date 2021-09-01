@@ -27,8 +27,7 @@ func BenchmarkParallelLocate(b *testing.B) {
 
 func TestMain(t *testing.T) {
 	com = cmd.Command{
-		Exe:  "/usr/sbin/locate",
-		Args: []string{"fstab"},
+		Args: []string{"--regex", "'lib.*id$'"},
 		Wg:   sync.WaitGroup{},
 	}
 	c := make(chan string)

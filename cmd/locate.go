@@ -15,9 +15,10 @@ const (
 
 // Command : Command executer
 type Command struct {
-	Exe  string   // /usr/bin/locate
 	Args []string // search keyword
 	Wg   sync.WaitGroup
+	// gocatedbpath : updatedbデータベースが保管されるディレクトリ
+	Gocatedbpath string
 }
 
 // Receiver : channel receiver
@@ -40,7 +41,7 @@ func (c *Command) Exec(dir string, ch chan string) {
 
 	// locate command option read after -- from command line
 	opt := append([]string{"-d", dir}, c.Args...)
-	command := exec.Command(c.Exe, opt...)
+	command := exec.Command("locate", opt...)
 	stdout, err := command.StdoutPipe()
 	if err != nil {
 		fmt.Println(err)
