@@ -44,7 +44,7 @@ var (
 
 type arrayField []string
 
-type UsageText struct {
+type usageText struct {
 	showVersion string
 	db          string
 	up          string
@@ -77,7 +77,7 @@ func (i *arrayField) Set(value string) error {
 // }
 
 func readOpt() []string {
-	usage := UsageText{
+	usage := usageText{
 		showVersion: "Show version",
 		db:          "Path of locate database file (ex: /path/something.db:/path/another.db)",
 		up:          "updatedb mode",
@@ -161,14 +161,16 @@ func main() {
 			for _, d := range dirs {
 				com.Wg.Add(1)
 				go func(d fs.FileInfo) {
-					if err := com.Updatedb(pairent, d); err != nil {
+					defer com.Wg.Done()
+					c := com.Updatedb(d)
+					if err := c.Run(); err != nil {
 						panic(err)
 					}
 				}(d)
 			}
 			com.Wg.Wait()
 		}
-		return
+		os.Exit(0)
 	}
 
 	// Run locate

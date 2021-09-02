@@ -17,7 +17,7 @@ const (
 type Command struct {
 	Args []string // search keyword
 	Wg   sync.WaitGroup
-	// gocatedbpath : updatedbデータベースが保管されるディレクトリ
+	// Gocatedbpath : updatedbデータベースが保管されるディレクトリ
 	Gocatedbpath string
 }
 

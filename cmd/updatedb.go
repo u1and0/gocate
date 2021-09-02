@@ -4,22 +4,25 @@ import (
 	"fmt"
 	"io/fs"
 	"os/exec"
+	"path/filepath"
 )
 
-func (c *Command) Updatedb(root string, f fs.FileInfo) error {
-	defer c.Wg.Done()
+// Updatedb generate command updatedb [OPTION]...
+func (c *Command) Updatedb(f fs.FileInfo) *exec.Cmd {
 	if !f.IsDir() {
-		return fmt.Errorf("do not must be included file %s", f.Name())
+		// e := fmt.Sprintf("do not must be included file %s", f.Name())
+		// return exec.Cmd{}, errors.New(e) //fmt.Errorf("do not must be included file %s", f.Name())
+		fmt.Println("warning: ", f.Name(), "will be ignored.")
 	}
+	pairent := filepath.Dir(f.Name())
 	opt := []string{
 		"-U",
-		fmt.Sprintf("%s/%s", root, f.Name()),
+		fmt.Sprintf("%s/%s", pairent, f.Name()),
 		"--output",
-		fmt.Sprintf("%s/%s.db", c.Gocatedbpath, f.Name()),
+		fmt.Sprintf("%s/%s_%s.db", c.Gocatedbpath, pairent, f.Name()),
 		// `pwd`/.gocate is temp directory
 	}
-	command := exec.Command("updatedb", opt...)
-	fmt.Println(command)
+	return exec.Command("updatedb", opt...)
+	// fmt.Println(c)
 	// command.Run()
-	return nil
 }
