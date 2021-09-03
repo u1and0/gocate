@@ -14,6 +14,6 @@ func TestUpdatedb(t *testing.T) {
 	actual := com.Updatedb(f)
 
 	if expected != actual {
-		t.Fatalf("got: %v want: %v", actual, expected)
+		t.Fatalf("\ngot:  %v\nwant: %v", actual, expected)
 	}
 }

@@ -158,7 +158,7 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-			for _, d := range dirs {
+			for _, d := range dirs[2:] { // [2:] for skipping . & ..
 				com.Wg.Add(1)
 				go func(d fs.FileInfo) {
 					defer com.Wg.Done()
