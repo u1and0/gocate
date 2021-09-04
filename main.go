@@ -14,8 +14,10 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 	"sync"
+	"time"
 
 	cmd "gocate/cmd"
 )
@@ -38,7 +40,7 @@ var (
 	// updatedb mode flag
 	up bool
 	// updatedb path
-	updb = arrayField{"/"}
+	updb = arrayField{}
 	//
 )
 
@@ -113,6 +115,9 @@ Usage of gocate
 		fmt.Println("gocate version:", VERSION)
 		os.Exit(0) // Exit with version info
 	}
+	if len(updb) < 1 { // updb default value
+		updb = arrayField{"/"}
+	}
 	return flag.Args() // options + search word
 }
 
@@ -151,25 +156,30 @@ func main() {
 	// db = db.splitCollon()
 
 	// Run updatedb
-	if up {
-		// <= -U /usr -U /etc
+	if up { // <= $ gocate -init -U /usr -U /etc
+		var dirs []string
 		for _, pairent := range updb { // updb = arrayField{"/usr", "/etc"}
-			dirs, err := ioutil.ReadDir(pairent) // =>fs.FileInfo{ /usr/lib, /usr/bin, ... /etc/pacman.d}
-			if err != nil {
-				panic(err)
+			ft := cmd.FileTree{Root: pairent, Dirs: readdir(pairent)} // fss = /usr/bin /usr/lib ... ( []fs.FileInfo )
+			for _, d := range ft.Dirs {
+				rootdir := path.Join(ft.Root, d.Name())
+				if d.IsDir() {
+					dirs = append(dirs, rootdir) // dirs = /usr/bin /usr/lib ... /etc/iptables
+				} else {
+					fmt.Printf("warning: %s is not directory, it will be ignored for indexing.\n", rootdir)
+				}
 			}
-			for _, d := range dirs[2:] { // [2:] for skipping . & ..
-				com.Wg.Add(1)
-				go func(d fs.FileInfo) {
-					defer com.Wg.Done()
-					c := com.Updatedb(d)
-					if err := c.Run(); err != nil {
-						panic(err)
-					}
-				}(d)
-			}
-			com.Wg.Wait()
 		}
+
+		for _, dir := range dirs {
+			com.Wg.Add(1)
+			go func(s string) {
+				defer com.Wg.Done()
+				c := com.Updatedb(s)
+				fmt.Printf("%v\n", c)
+			}(dir)
+			time.Sleep(1 * time.Second)
+		}
+		com.Wg.Wait()
 		os.Exit(0)
 	}
 
@@ -200,4 +210,12 @@ func normalLocate(args []string) {
 		}
 		fmt.Println(o)
 	}
+}
+
+func readdir(root string) []fs.FileInfo {
+	dirs, err := ioutil.ReadDir(root) // =>fs.FileInfo{ /usr/lib, /usr/bin, ... /etc/pacman.d}
+	if err != nil {
+		panic(err)
+	}
+	return dirs
 }
