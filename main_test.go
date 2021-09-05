@@ -44,3 +44,37 @@ func TestMain(t *testing.T) {
 	}
 	com.Wg.Wait()
 }
+
+func Test_arrayFieldDbPath(t *testing.T) {
+	af := arrayField{"/usr", "/var"}
+	expected := []string{ // $ ls -d /usr/* /var/*
+		"/usr/bin",
+		"/usr/include",
+		"/usr/lib",
+		"/usr/lib32",
+		// "/usr/lib64", <- symbolic link
+		"/usr/local",
+		// "/usr/sbin", <- symbolic link
+		"/usr/share",
+		"/usr/src",
+		"/var/cache",
+		"/var/db",
+		"/var/empty",
+		"/var/games",
+		"/var/lib",
+		"/var/local",
+		// "/var/lock", <- symbolic link
+		"/var/log",
+		// "/var/mail", <- symbolic link
+		"/var/opt",
+		// "/var/run", <- symbolic link
+		"/var/spool",
+		"/var/tmp",
+	}
+	actual := af.Dbpath()
+	for i, e := range expected {
+		if e != actual[i] {
+			t.Fatalf("%s,%s,\ngot:  %v\nwant: %v", actual[i], e, actual, expected)
+		}
+	}
+}

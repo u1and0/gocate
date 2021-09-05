@@ -15,9 +15,11 @@ const (
 
 // Command : Command executer
 type Command struct {
-	Args []string // search keyword
+	// Args : Search keyword and option
+	Args []string
+	// Wg : Waiting group for goroutine
 	Wg   sync.WaitGroup
-	// Gocatedbpath : updatedbデータベースが保管されるディレクトリ
+	// Gocatedbpath : Storing directory for updatedb database
 	Gocatedbpath string
 }
 

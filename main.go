@@ -10,11 +10,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/fs"
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
 	"strings"
 	"sync"
 	"time"
@@ -24,14 +22,17 @@ import (
 
 const (
 	// BENCH : Benchmark test flag
-	BENCH bool = false
+	BENCH = false
 	// VERSION : Show version flag
-	VERSION string = "v0.1.1r"
+	VERSION = "v0.1.1r"
 	// DEFAULTDB : Default locate search path
-	DEFAULTDB string = "/var/lib/mlocate/mlocate.db"
+	DEFAULTDB = "/var/lib/mlocate/mlocate.db"
+	// GOCATEDBPATH : Storing directory for updatedb database
+	GOCATEDBPATH = "/var/lib/mlocate"
 )
 
 var (
+	// com command structure
 	com cmd.Command
 	// locate command path
 	showVersion bool
@@ -41,7 +42,6 @@ var (
 	up bool
 	// updatedb path
 	updb = arrayField{}
-	//
 )
 
 type arrayField []string
@@ -54,31 +54,30 @@ type usageText struct {
 }
 
 // arrayField.String sets multiple -f flag
-func (i *arrayField) String() string {
+func (a *arrayField) String() string {
 	// change this, this is just can example to satisfy the interface
 	return "my string representation"
 }
 
 // arrayField.Set sets multiple -f flag
-func (i *arrayField) Set(value string) error {
-	*i = append(*i, strings.TrimSpace(value))
+func (a *arrayField) Set(value string) error {
+	*a = append(*a, strings.TrimSpace(value))
 	return nil
 }
 
-// // db に:が含まれていたら、分割して[]stringに格納
-// func (sa *arrayField) splitCollon() (sb arrayField) {
-// 	for _, s := range sa {
-// 		if strings.Contains(s, ":") {
-// 			sa := strings.Split(s, ":")
-// 			dbpath = append(sb, da...)
-// 		} else {
-// 			dbpath = append(sb, d)
-// 		}
-// 	}
-// 	return
-// }
+func (a *arrayField) Dbpath() (dd []string) {
+	for _, pairent := range *a { // a = arrayField{"/usr", "/etc"}
+		dirs, err := ioutil.ReadDir(pairent) // => fs.FileInfo{ lib, bin, ... }
+		if err != nil {
+			panic(err)
+		}
+		ft := cmd.FileTree{Pairent: pairent, Dirs: dirs} // fss = /usr/bin /usr/lib ... ( []fs.FileInfo )
+		dd = ft.DirectoryFilter(dd)
+	}
+	return
+}
 
-func readOpt() []string {
+func flagParse() []string {
 	usage := usageText{
 		showVersion: "Show version",
 		db:          "Path of locate database file (ex: /path/something.db:/path/another.db)",
@@ -107,7 +106,11 @@ Usage of gocate
 -U, -database-root
 	%s
 -- [OPTION]...
-	locate command option`, usage.showVersion, usage.db, usage.up, usage.updb)
+	locate command option`,
+			usage.showVersion,
+			usage.db,
+			usage.up,
+			usage.updb)
 		fmt.Fprintf(os.Stderr, "%s\n", usageTxt)
 	}
 	flag.Parse()
@@ -129,8 +132,8 @@ func main() {
 			panic(err)
 		}
 	}
-	com.Gocatedbpath = "./.gocate" // "/var/lib/mlocate"
-	com.Args = readOpt()
+	com.Gocatedbpath = GOCATEDBPATH
+	com.Args = flagParse()
 	com.Wg = sync.WaitGroup{} // カウンタを宣言
 
 	// db 優先順位
@@ -153,31 +156,19 @@ func main() {
 		}
 	}
 
-	// db = db.splitCollon()
-
 	// Run updatedb
 	if up { // <= $ gocate -init -U /usr -U /etc
-		var dirs []string
-		for _, pairent := range updb { // updb = arrayField{"/usr", "/etc"}
-			ft := cmd.FileTree{Root: pairent, Dirs: readdir(pairent)} // fss = /usr/bin /usr/lib ... ( []fs.FileInfo )
-			for _, d := range ft.Dirs {
-				rootdir := path.Join(ft.Root, d.Name())
-				if d.IsDir() {
-					dirs = append(dirs, rootdir) // dirs = /usr/bin /usr/lib ... /etc/iptables
-				} else {
-					fmt.Printf("warning: %s is not directory, it will be ignored for indexing.\n", rootdir)
-				}
-			}
-		}
-
-		for _, dir := range dirs {
+		for _, dir := range updb.Dbpath() { // => /usr/bin /usr/lib ...
 			com.Wg.Add(1)
-			go func(s string) {
+			go func(d string) {
 				defer com.Wg.Done()
-				c := com.Updatedb(s)
+				c := com.Updatedb(d)
 				fmt.Printf("%v\n", c)
+				// if err := c.Run(); err != nil {
+				// 	panic(err)
+				// }
 			}(dir)
-			time.Sleep(1 * time.Second)
+			time.Sleep(300 * time.Millisecond)
 		}
 		com.Wg.Wait()
 		os.Exit(0)
@@ -210,12 +201,4 @@ func normalLocate(args []string) {
 		}
 		fmt.Println(o)
 	}
-}
-
-func readdir(root string) []fs.FileInfo {
-	dirs, err := ioutil.ReadDir(root) // =>fs.FileInfo{ /usr/lib, /usr/bin, ... /etc/pacman.d}
-	if err != nil {
-		panic(err)
-	}
-	return dirs
 }
