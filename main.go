@@ -2,7 +2,7 @@
 // $ go build
 // Usage:
 //		gocate [-d path] [--database=path] [--version] [--help] PATTERN... -- [LOCATE OPTION]
-//		$ ./gocate -d $(find test -name '*.db' | paste -sd:) -- -i --regex fstab
+//		$ ./gocate -d $(find test -name '*.db' | paste -sd:) -- -i --regex 'lib.*id$'
 // For benchmark test, const BENCH turns true then run below
 //		$ go test -bench
 package main
@@ -10,6 +10,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -20,40 +21,103 @@ import (
 
 const (
 	// BENCH : Benchmark test flag
-	BENCH bool = false
+	BENCH = false
 	// VERSION : Show version flag
-	VERSION string = "v0.1.1r"
+	VERSION = "v0.2.0"
 	// DEFAULTDB : Default locate search path
-	DEFAULTDB string = "/var/lib/mlocate/mlocate.db"
+	DEFAULTDB = "/var/lib/mlocate/mlocate.db"
+	// GOCATEDBPATH : Storing directory for updatedb database
+	GOCATEDBPATH = "/var/lib/mlocate"
 )
 
 var (
+	// com command structure
 	com cmd.Command
 	// locate command path
 	showVersion bool
 	// for normalLocate test default value
-	db  string
-	err error
-	// word for test
+	db string
+	// updatedb mode flag
+	up bool
+	// updatedb path
+	updb   = arrayField{}
+	dryrun bool
 )
 
-func readOpt() []string {
-	flag.BoolVar(&showVersion, "v", false, "Show version")
-	flag.BoolVar(&showVersion, "version", false, "Show version")
-	flag.StringVar(&db, "d", "", "Path of locate database file (ex: /path/something.db:/path/another.db)")
-	flag.StringVar(&db, "database", "", "Path of locate database file (ex: /path/something.db:/path/another.db)")
+type arrayField []string
+
+type usageText struct {
+	showVersion string
+	db          string
+	up          string
+	updb        string
+	dryrun      string
+}
+
+// arrayField.String sets multiple -f flag
+func (a *arrayField) String() string {
+	// change this, this is just can example to satisfy the interface
+	return "my string representation"
+}
+
+// arrayField.Set sets multiple -f flag
+func (a *arrayField) Set(value string) error {
+	*a = append(*a, strings.TrimSpace(value))
+	return nil
+}
+
+func (a *arrayField) Dbpath() (dd []string) {
+	for _, pairent := range *a { // a = arrayField{"/usr", "/etc"}
+		dirs, err := ioutil.ReadDir(pairent) // => fs.FileInfo{ lib, bin, ... }
+		if err != nil {
+			panic(err)
+		}
+		ft := cmd.FileTree{Pairent: pairent, Dirs: dirs} // fss = /usr/bin /usr/lib ... ( []fs.FileInfo )
+		dd = ft.DirectoryFilter(dd)
+	}
+	return
+}
+
+func flagParse() []string {
+	usage := usageText{
+		showVersion: "Show version",
+		db:          "Path of locate database file (ex: /path/something.db:/path/another.db)",
+		up:          "updatedb mode",
+		updb:        "Store only results of scanning the file system subtree rooted at PATH  to  the  generated  database.",
+		dryrun:      "Just print command, do NOT run updatedb command.",
+	}
+	flag.BoolVar(&showVersion, "v", false, usage.showVersion)
+	flag.BoolVar(&showVersion, "version", false, usage.showVersion)
+	flag.StringVar(&db, "d", "", usage.db)
+	flag.StringVar(&db, "database", "", usage.db)
+	flag.BoolVar(&up, "init", false, usage.up)
+	flag.Var(&updb, "U", usage.updb)
+	flag.Var(&updb, "database-root", usage.updb)
+	flag.BoolVar(&dryrun, "dryrun", false, usage.dryrun)
 	flag.Usage = func() {
-		usageTxt := `parallel find files by name
+		usageTxt := fmt.Sprintf(`parallel find files by name
 
 Usage of gocate
 	gocate [OPTION]... PATTERN...
 
 -v, -version
-	Show version
+	%s
 -d, -database string
-	Path of locate database file (ex: /path/something.db:/path/another.db)
+	%s
+-init
+	%s
+-U, -database-root
+	%s
+-dryrun
+	%s
 -- [OPTION]...
-	locate command option`
+	locate command option`,
+			usage.showVersion,
+			usage.db,
+			usage.up,
+			usage.updb,
+			usage.dryrun,
+		)
 		fmt.Fprintf(os.Stderr, "%s\n", usageTxt)
 	}
 	flag.Parse()
@@ -61,22 +125,29 @@ Usage of gocate
 		fmt.Println("gocate version:", VERSION)
 		os.Exit(0) // Exit with version info
 	}
+	if len(updb) < 1 { // updb default value
+		updb = arrayField{"/"}
+	}
 	return flag.Args() // options + search word
 }
 
 func main() {
 	// Check locate command
-	com.Exe, err = exec.LookPath("locate")
-	if err != nil {
-		panic(err)
+	for _, c := range []string{"locate", "updatedb"} {
+		_, err := exec.LookPath(c)
+		if err != nil {
+			panic(err)
+		}
 	}
-	com.Args = readOpt()
+	com.Gocatedbpath = GOCATEDBPATH
+	com.Args = flagParse()
 	com.Wg = sync.WaitGroup{} // カウンタを宣言
 
 	// db 優先順位
 	// -d PATH > LOCATE_PATH > /var/lib/mlocate/mlocate.db
-	if db == "" { // -d option が設定されなかったら
-		if db = os.Getenv("LOCATE_PATH"); db == "" { // LOCATE_PATHをdbとする
+	if len(db) < 1 { // -d option が設定されなかったら
+		db = os.Getenv("LOCATE_PATH")
+		if len(db) < 1 { // LOCATE_PATHをdbとする
 			db = DEFAULTDB // LOCATE_PATH も設定されなかったら DEFAULTDBとする
 		} else { // LOCATE_PATHが設定されていたら
 			// 2重検索を止めるためにLOCATE_PATHを空にする
@@ -92,15 +163,38 @@ func main() {
 		}
 	}
 
-	// Run goroutine
+	// Run updatedb
+	if up { // <= $ gocate -init -U /usr -U /etc
+		for _, dir := range updb.Dbpath() { // => /usr/bin /usr/lib ...
+			com.Wg.Add(1)
+			go func(d string) {
+				defer com.Wg.Done()
+				c := com.Updatedb(d)
+				fmt.Printf("%v\n", c)
+				if !dryrun {
+					if err := c.Run(); err != nil {
+						panic(err)
+					}
+				}
+			}(dir)
+		}
+		com.Wg.Wait()
+		os.Exit(0)
+	}
+
+	// Run locate
 	c := make(chan string)
 	defer close(c) // main関数終了時にチャネル終了
 
 	go cmd.Receiver(c)
 	for _, d := range strings.Split(db, ":") {
-		com.Wg.Add(1) // カウンタの追加
-		com.Dir = d
-		go com.Exec(c)
+		/* arrayField db はパスを複数持っている
+		 * `gocate -d /usr -d /etc:/var` として走らせた場合
+		 * "/usr", "/etc:/var" コロンで区切られた場合は、
+		 * そのままlocateに渡して1データベースとして検索する
+		 */
+		com.Wg.Add(1) // カウンタの追加はExec()の外でないとすぐ終わる
+		go com.Exec(d, c)
 	}
 	com.Wg.Wait() // カウンタが0になるまでブロック
 }

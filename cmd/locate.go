@@ -15,10 +15,12 @@ const (
 
 // Command : Command executer
 type Command struct {
-	Exe  string   // /usr/bin/locate
-	Dir  string   // -d option
-	Args []string // search keyword
+	// Args : Search keyword and option
+	Args []string
+	// Wg : Waiting group for goroutine
 	Wg   sync.WaitGroup
+	// Gocatedbpath : Storing directory for updatedb database
+	Gocatedbpath string
 }
 
 // Receiver : channel receiver
@@ -36,12 +38,12 @@ func Receiver(ch <-chan string) {
 }
 
 // Exec : locate command executer
-func (c *Command) Exec(ch chan string) {
+func (c *Command) Exec(dir string, ch chan string) {
 	defer c.Wg.Done() // go func抜けるときにカウンタを減算
 
 	// locate command option read after -- from command line
-	opt := append([]string{"-d", c.Dir}, c.Args...)
-	command := exec.Command(c.Exe, opt...)
+	opt := append([]string{"-d", dir}, c.Args...)
+	command := exec.Command("locate", opt...)
 	stdout, err := command.StdoutPipe()
 	if err != nil {
 		fmt.Println(err)
