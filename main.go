@@ -15,7 +15,6 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
-	"time"
 
 	cmd "gocate/cmd"
 )
@@ -24,7 +23,7 @@ const (
 	// BENCH : Benchmark test flag
 	BENCH = false
 	// VERSION : Show version flag
-	VERSION = "v0.1.1r"
+	VERSION = "v0.2.0"
 	// DEFAULTDB : Default locate search path
 	DEFAULTDB = "/var/lib/mlocate/mlocate.db"
 	// GOCATEDBPATH : Storing directory for updatedb database
@@ -41,7 +40,8 @@ var (
 	// updatedb mode flag
 	up bool
 	// updatedb path
-	updb = arrayField{}
+	updb   = arrayField{}
+	dryrun bool
 )
 
 type arrayField []string
@@ -51,6 +51,7 @@ type usageText struct {
 	db          string
 	up          string
 	updb        string
+	dryrun      string
 }
 
 // arrayField.String sets multiple -f flag
@@ -83,6 +84,7 @@ func flagParse() []string {
 		db:          "Path of locate database file (ex: /path/something.db:/path/another.db)",
 		up:          "updatedb mode",
 		updb:        "Store only results of scanning the file system subtree rooted at PATH  to  the  generated  database.",
+		dryrun:      "Just print command, do NOT run updatedb command.",
 	}
 	flag.BoolVar(&showVersion, "v", false, usage.showVersion)
 	flag.BoolVar(&showVersion, "version", false, usage.showVersion)
@@ -91,6 +93,7 @@ func flagParse() []string {
 	flag.BoolVar(&up, "init", false, usage.up)
 	flag.Var(&updb, "U", usage.updb)
 	flag.Var(&updb, "database-root", usage.updb)
+	flag.BoolVar(&dryrun, "dryrun", false, usage.dryrun)
 	flag.Usage = func() {
 		usageTxt := fmt.Sprintf(`parallel find files by name
 
@@ -105,12 +108,16 @@ Usage of gocate
 	%s
 -U, -database-root
 	%s
+-dryrun
+	%s
 -- [OPTION]...
 	locate command option`,
 			usage.showVersion,
 			usage.db,
 			usage.up,
-			usage.updb)
+			usage.updb,
+			usage.dryrun,
+		)
 		fmt.Fprintf(os.Stderr, "%s\n", usageTxt)
 	}
 	flag.Parse()
@@ -164,11 +171,12 @@ func main() {
 				defer com.Wg.Done()
 				c := com.Updatedb(d)
 				fmt.Printf("%v\n", c)
-				// if err := c.Run(); err != nil {
-				// 	panic(err)
-				// }
+				if !dryrun {
+					if err := c.Run(); err != nil {
+						panic(err)
+					}
+				}
 			}(dir)
-			time.Sleep(300 * time.Millisecond)
 		}
 		com.Wg.Wait()
 		os.Exit(0)
