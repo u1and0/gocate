@@ -16,14 +16,14 @@ import (
 	"strings"
 	"sync"
 
-	cmd "gocate/cmd"
+	cmd "github.com/u1and0/gocate/cmd"
 )
 
 const (
 	// BENCH : Benchmark test flag
 	BENCH = false
 	// VERSION : Show version flag
-	VERSION = "v0.2.0"
+	VERSION = "v0.2.2"
 	// DEFAULTDB : Default locate search path
 	DEFAULTDB = "/var/lib/mlocate/mlocate.db"
 	// GOCATEDBPATH : Storing directory for updatedb database
