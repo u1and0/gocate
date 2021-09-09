@@ -6,7 +6,7 @@ Parallel search for local files and directories.
 ## Installation
 
 ```
-$ go get github.com/u1and0/gocate
+$ go install github.com/u1and0/gocate@latest
 ```
 
 
