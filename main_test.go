@@ -1,9 +1,10 @@
 package main
 
 import (
-	cmd "gocate/cmd"
 	"sync"
 	"testing"
+
+	cmd "github.com/u1and0/gocate/cmd"
 )
 
 func BenchmarkNormalLocate(b *testing.B) {
@@ -40,7 +41,7 @@ func TestMain(t *testing.T) {
 	}
 	for _, d := range dd {
 		com.Wg.Add(1)
-		go com.Exec(d, c)
+		go com.Locate(d, c)
 	}
 	com.Wg.Wait()
 }

@@ -37,8 +37,8 @@ func Receiver(ch <-chan string) {
 	}
 }
 
-// Exec : locate command executer
-func (c *Command) Exec(dir string, ch chan string) {
+// Locate : locate command executer
+func (c *Command) Locate(dir string, ch chan string) {
 	defer c.Wg.Done() // go func抜けるときにカウンタを減算
 
 	// locate command option read after -- from command line

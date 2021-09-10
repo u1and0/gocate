@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -23,7 +24,7 @@ const (
 	// BENCH : Benchmark test flag
 	BENCH = false
 	// VERSION : Show version flag
-	VERSION = "v0.2.2"
+	VERSION = "v0.2.2r"
 	// DEFAULTDB : Default locate search path
 	DEFAULTDB = "/var/lib/mlocate/mlocate.db"
 	// GOCATEDBPATH : Storing directory for updatedb database
@@ -81,15 +82,15 @@ func (a *arrayField) Dbpath() (dd []string) {
 func flagParse() []string {
 	usage := usageText{
 		showVersion: "Show version",
-		db:          "Path of locate database file (ex: /path/something.db:/path/another.db)",
+		db:          "Path of locate database file (default: /var/lib/mlocate)",
 		up:          "updatedb mode",
 		updb:        "Store only results of scanning the file system subtree rooted at PATH  to  the  generated  database.",
 		dryrun:      "Just print command, do NOT run updatedb command.",
 	}
 	flag.BoolVar(&showVersion, "v", false, usage.showVersion)
 	flag.BoolVar(&showVersion, "version", false, usage.showVersion)
-	flag.StringVar(&db, "d", "", usage.db)
-	flag.StringVar(&db, "database", "", usage.db)
+	flag.StringVar(&db, "d", "/var/lib/mlocate", usage.db)
+	flag.StringVar(&db, "database", "/var/lib/mlocate", usage.db)
 	flag.BoolVar(&up, "init", false, usage.up)
 	flag.Var(&updb, "U", usage.updb)
 	flag.Var(&updb, "database-root", usage.updb)
@@ -187,14 +188,19 @@ func main() {
 	defer close(c) // main関数終了時にチャネル終了
 
 	go cmd.Receiver(c)
-	for _, d := range strings.Split(db, ":") {
+	dbs, err := filepath.Glob(GOCATEDBPATH + "/*.db")
+	if err != nil {
+		panic(nil)
+	}
+	for _, d := range dbs {
+		// for _, d := range strings.Split(db, ":") {
 		/* arrayField db はパスを複数持っている
 		 * `gocate -d /usr -d /etc:/var` として走らせた場合
 		 * "/usr", "/etc:/var" コロンで区切られた場合は、
 		 * そのままlocateに渡して1データベースとして検索する
 		 */
 		com.Wg.Add(1) // カウンタの追加はExec()の外でないとすぐ終わる
-		go com.Exec(d, c)
+		go com.Locate(d, c)
 	}
 	com.Wg.Wait() // カウンタが0になるまでブロック
 }
