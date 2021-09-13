@@ -18,9 +18,9 @@ type Command struct {
 	// Args : Search keyword and option
 	Args []string
 	// Wg : Waiting group for goroutine
-	Wg   sync.WaitGroup
-	// Gocatedbpath : Storing directory for updatedb database
-	Gocatedbpath string
+	Wg sync.WaitGroup
+	// output : Storing directory for updatedb database
+	Output string
 }
 
 // Receiver : channel receiver
@@ -31,7 +31,7 @@ func Receiver(ch <-chan string) {
 			break
 		}
 		if BENCH {
-			continue
+			continue // Ignore print for benchmark test
 		}
 		fmt.Println(s)
 	}

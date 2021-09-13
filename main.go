@@ -26,9 +26,7 @@ const (
 	// VERSION : Show version flag
 	VERSION = "v0.2.2r"
 	// DEFAULTDB : Default locate search path
-	DEFAULTDB = "/var/lib/mlocate/mlocate.db"
-	// GOCATEDBPATH : Storing directory for updatedb database
-	GOCATEDBPATH = "/var/lib/mlocate"
+	DEFAULTDB = "/var/lib/mlocate/"
 )
 
 var (
@@ -41,7 +39,10 @@ var (
 	// updatedb mode flag
 	up bool
 	// updatedb path
-	updb   = arrayField{}
+	updb = arrayField{}
+	// output directory for updatedb
+	output string
+	// if true, do not run the updatedb script
 	dryrun bool
 )
 
@@ -52,6 +53,7 @@ type usageText struct {
 	db          string
 	up          string
 	updb        string
+	output      string
 	dryrun      string
 }
 
@@ -85,6 +87,7 @@ func flagParse() []string {
 		db:          "Path of locate database file (default: /var/lib/mlocate)",
 		up:          "updatedb mode",
 		updb:        "Store only results of scanning the file system subtree rooted at PATH  to  the  generated  database.",
+		output:      "Write the database to DIRECTORY instead of using the default database directory.",
 		dryrun:      "Just print command, do NOT run updatedb command.",
 	}
 	flag.BoolVar(&showVersion, "v", false, usage.showVersion)
@@ -94,6 +97,8 @@ func flagParse() []string {
 	flag.BoolVar(&up, "init", false, usage.up)
 	flag.Var(&updb, "U", usage.updb)
 	flag.Var(&updb, "database-root", usage.updb)
+	flag.StringVar(&output, "o", DEFAULTDB, usage.output)
+	flag.StringVar(&output, "output", DEFAULTDB, usage.output)
 	flag.BoolVar(&dryrun, "dryrun", false, usage.dryrun)
 	flag.Usage = func() {
 		usageTxt := fmt.Sprintf(`parallel find files by name
@@ -103,20 +108,23 @@ Usage of gocate
 
 -v, -version
 	%s
--d, -database string
+-d, -database DIRECTORY
 	%s
 -init
 	%s
--U, -database-root
+-U, -database-root DIRECTORY
+	%s
+-o, -output DIRECTORY
 	%s
 -dryrun
 	%s
 -- [OPTION]...
-	locate command option`,
+	locate or updatedb command option`,
 			usage.showVersion,
 			usage.db,
 			usage.up,
 			usage.updb,
+			usage.output,
 			usage.dryrun,
 		)
 		fmt.Fprintf(os.Stderr, "%s\n", usageTxt)
@@ -135,34 +143,33 @@ Usage of gocate
 func main() {
 	// Check locate command
 	for _, c := range []string{"locate", "updatedb"} {
-		_, err := exec.LookPath(c)
-		if err != nil {
+		if _, err := exec.LookPath(c); err != nil {
 			panic(err)
 		}
 	}
-	com.Gocatedbpath = GOCATEDBPATH
+	com.Output = output
 	com.Args = flagParse()
 	com.Wg = sync.WaitGroup{} // カウンタを宣言
 
-	// db 優先順位
-	// -d PATH > LOCATE_PATH > /var/lib/mlocate/mlocate.db
-	if len(db) < 1 { // -d option が設定されなかったら
-		db = os.Getenv("LOCATE_PATH")
-		if len(db) < 1 { // LOCATE_PATHをdbとする
-			db = DEFAULTDB // LOCATE_PATH も設定されなかったら DEFAULTDBとする
-		} else { // LOCATE_PATHが設定されていたら
-			// 2重検索を止めるためにLOCATE_PATHを空にする
-			if err := os.Setenv("LOCATE_PATH", ""); err != nil {
-				panic(err)
-			}
-			// 終了時にLOCATE_PATHを戻して終了
-			defer func() {
-				if err := os.Setenv("LOCATE_PATH", db); err != nil {
-					panic(err)
-				}
-			}()
-		}
-	}
+	// // db 優先順位
+	// // -d PATH > LOCATE_PATH > /var/lib/mlocate/mlocate.db
+	// if len(db) < 1 { // -d option が設定されなかったら
+	// 	db = os.Getenv("LOCATE_PATH")
+	// 	if len(db) < 1 { // LOCATE_PATHをdbとする
+	// 		db = DEFAULTDB // LOCATE_PATH も設定されなかったら DEFAULTDBとする
+	// 	} else { // LOCATE_PATHが設定されていたら
+	// 		// 2重検索を止めるためにLOCATE_PATHを空にする
+	// 		if err := os.Setenv("LOCATE_PATH", ""); err != nil {
+	// 			panic(err)
+	// 		}
+	// 		// 終了時にLOCATE_PATHを戻して終了
+	// 		defer func() {
+	// 			if err := os.Setenv("LOCATE_PATH", db); err != nil {
+	// 				panic(err)
+	// 			}
+	// 		}()
+	// 	}
+	// }
 
 	// Run updatedb
 	if up { // <= $ gocate -init -U /usr -U /etc
@@ -171,7 +178,7 @@ func main() {
 			go func(d string) {
 				defer com.Wg.Done()
 				c := com.Updatedb(d)
-				fmt.Printf("%v\n", c)
+				fmt.Println(c)
 				if !dryrun {
 					if err := c.Run(); err != nil {
 						panic(err)
@@ -188,10 +195,11 @@ func main() {
 	defer close(c) // main関数終了時にチャネル終了
 
 	go cmd.Receiver(c)
-	dbs, err := filepath.Glob(GOCATEDBPATH + "/*.db")
+	dbs, err := filepath.Glob(db + "/*.db")
 	if err != nil {
 		panic(nil)
 	}
+	fmt.Println(dbs)
 	for _, d := range dbs {
 		// for _, d := range strings.Split(db, ":") {
 		/* arrayField db はパスを複数持っている
