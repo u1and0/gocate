@@ -69,6 +69,7 @@ func (a *arrayField) Set(value string) error {
 	return nil
 }
 
+// Dbpath : directory names for indexing using -U option
 func (a *arrayField) Dbpath() (dd []string) {
 	for _, pairent := range *a { // a = arrayField{"/usr", "/etc"}
 		dirs, err := ioutil.ReadDir(pairent) // => fs.FileInfo{ lib, bin, ... }
@@ -147,8 +148,8 @@ func main() {
 			panic(err)
 		}
 	}
+	com.Args = flagParse() // 先に実行しないとoutputとかのフラグ読み込まれない
 	com.Output = output
-	com.Args = flagParse()
 	com.Wg = sync.WaitGroup{} // カウンタを宣言
 
 	// // db 優先順位
