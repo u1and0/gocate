@@ -152,26 +152,6 @@ func main() {
 	com.Output = output
 	com.Wg = sync.WaitGroup{} // カウンタを宣言
 
-	// // db 優先順位
-	// // -d PATH > LOCATE_PATH > /var/lib/mlocate/mlocate.db
-	// if len(db) < 1 { // -d option が設定されなかったら
-	// 	db = os.Getenv("LOCATE_PATH")
-	// 	if len(db) < 1 { // LOCATE_PATHをdbとする
-	// 		db = DEFAULTDB // LOCATE_PATH も設定されなかったら DEFAULTDBとする
-	// 	} else { // LOCATE_PATHが設定されていたら
-	// 		// 2重検索を止めるためにLOCATE_PATHを空にする
-	// 		if err := os.Setenv("LOCATE_PATH", ""); err != nil {
-	// 			panic(err)
-	// 		}
-	// 		// 終了時にLOCATE_PATHを戻して終了
-	// 		defer func() {
-	// 			if err := os.Setenv("LOCATE_PATH", db); err != nil {
-	// 				panic(err)
-	// 			}
-	// 		}()
-	// 	}
-	// }
-
 	// Run updatedb
 	if up { // <= $ gocate -init -U /usr -U /etc
 		for _, dir := range updb.Dbpath() { // => /usr/bin /usr/lib ...
