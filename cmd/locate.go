@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"sync"
 )
 
 const (
@@ -17,8 +16,6 @@ const (
 type Command struct {
 	// Args : Search keyword and option
 	Args []string
-	// Wg : Waiting group for goroutine
-	Wg sync.WaitGroup
 	// output : Storing directory for updatedb database
 	Output string
 }
@@ -38,18 +35,20 @@ func Receiver(ch <-chan string) {
 }
 
 // Locate : locate command executer
-func (c *Command) Locate(dir string, ch chan string) {
-	defer c.Wg.Done() // go func抜けるときにカウンタを減算
-
+func (c *Command) Locate(dir string) *exec.Cmd {
 	// locate command option read after -- from command line
 	opt := append([]string{"-d", dir}, c.Args...)
 	command := exec.Command("locate", opt...)
-	stdout, err := command.StdoutPipe()
+	return command
+}
+
+func Run(c exec.Cmd, ch chan string) {
+	stdout, err := c.StdoutPipe()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	command.Start()
+	c.Start()
 
 	scanner := bufio.NewScanner(stdout)
 
@@ -59,4 +58,5 @@ func (c *Command) Locate(dir string, ch chan string) {
 			ch <- s
 		}
 	}
+
 }

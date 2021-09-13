@@ -27,9 +27,9 @@ func BenchmarkParallelLocate(b *testing.B) {
 }
 
 func TestMain(t *testing.T) {
+	var wg = sync.WaitGroup{}
 	com = cmd.Command{
 		Args: []string{"--regex", "'lib.*id$'"},
-		Wg:   sync.WaitGroup{},
 	}
 	c := make(chan string)
 
@@ -40,10 +40,10 @@ func TestMain(t *testing.T) {
 		"test/usr.db",
 	}
 	for _, d := range dd {
-		com.Wg.Add(1)
-		go com.Locate(d, c)
+		wg.Add(1)
+		go com.Locate(d)
 	}
-	com.Wg.Wait()
+	wg.Wait()
 }
 
 func Test_arrayFieldDbPath(t *testing.T) {

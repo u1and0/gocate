@@ -30,6 +30,8 @@ const (
 )
 
 var (
+	// カウンタを宣言
+	wg = sync.WaitGroup{}
 	// com command structure
 	com cmd.Command
 	// locate command path
@@ -150,14 +152,13 @@ func main() {
 	}
 	com.Args = flagParse() // 先に実行しないとoutputとかのフラグ読み込まれない
 	com.Output = output
-	com.Wg = sync.WaitGroup{} // カウンタを宣言
 
 	// Run updatedb
 	if up { // <= $ gocate -init -U /usr -U /etc
 		for _, dir := range updb.Dbpath() { // => /usr/bin /usr/lib ...
-			com.Wg.Add(1)
+			wg.Add(1)
 			go func(d string) {
-				defer com.Wg.Done()
+				defer wg.Done()
 				c := com.Updatedb(d)
 				fmt.Println(c)
 				if !dryrun {
@@ -167,7 +168,7 @@ func main() {
 				}
 			}(dir)
 		}
-		com.Wg.Wait()
+		wg.Wait()
 		os.Exit(0)
 	}
 
@@ -180,18 +181,19 @@ func main() {
 	if err != nil {
 		panic(nil)
 	}
-	fmt.Println(dbs)
 	for _, d := range dbs {
-		// for _, d := range strings.Split(db, ":") {
-		/* arrayField db はパスを複数持っている
-		 * `gocate -d /usr -d /etc:/var` として走らせた場合
-		 * "/usr", "/etc:/var" コロンで区切られた場合は、
-		 * そのままlocateに渡して1データベースとして検索する
-		 */
-		com.Wg.Add(1) // カウンタの追加はExec()の外でないとすぐ終わる
-		go com.Locate(d, c)
+		wg.Add(1) // カウンタの追加はLocate()の外でないとすぐ終わる
+		go func(d string, ch chan string) {
+			defer wg.Done() // go func抜けるときにカウンタを減算
+			c := com.Locate(d)
+			if dryrun {
+				fmt.Println(c)
+			} else {
+				cmd.Run(*c, ch)
+			}
+		}(d, c)
 	}
-	com.Wg.Wait() // カウンタが0になるまでブロック
+	wg.Wait() // カウンタが0になるまでブロック
 }
 
 // Nomral locate command for benchmark
