@@ -34,7 +34,7 @@ func Receiver(ch <-chan string) {
 	}
 }
 
-// Locate : locate command executer
+// Locate : locate command generator
 func (c *Command) Locate(dir string) *exec.Cmd {
 	// locate command option read after -- from command line
 	opt := append([]string{"-d", dir}, c.Args...)
@@ -42,6 +42,7 @@ func (c *Command) Locate(dir string) *exec.Cmd {
 	return command
 }
 
+// Run : locate command executer write to channel
 func Run(c exec.Cmd, ch chan string) {
 	stdout, err := c.StdoutPipe()
 	if err != nil {
