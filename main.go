@@ -30,12 +30,6 @@ const (
 )
 
 var (
-	// カウンタを宣言
-	wg = sync.WaitGroup{}
-	// com command structure
-	com cmd.Command
-	// locate command path
-	showVersion bool
 	// for normalLocate test default value
 	db string
 	// updatedb mode flag
@@ -78,21 +72,24 @@ func (a *arrayField) Dbpath() (dd []string) {
 		if err != nil {
 			panic(err)
 		}
-		ft := cmd.FileTree{Pairent: pairent, Dirs: dirs} // fss = /usr/bin /usr/lib ... ( []fs.FileInfo )
+		ft := cmd.FileTree{Pairent: pairent, Dirs: dirs} // ft = /usr/bin /usr/lib ... ( []fs.FileInfo )
 		dd = ft.DirectoryFilter(dd)
 	}
 	return
 }
 
-func flagParse() []string {
-	usage := usageText{
-		showVersion: "Show version",
-		db:          "Path of locate database file (default: /var/lib/mlocate)",
-		up:          "updatedb mode",
-		updb:        "Store only results of scanning the file system subtree rooted at PATH  to  the  generated  database.",
-		output:      "Write the database to DIRECTORY instead of using the default database directory.",
-		dryrun:      "Just print command, do NOT run updatedb command.",
-	}
+func flagParse() cmd.Command {
+	var (
+		showVersion bool
+		usage       = usageText{
+			showVersion: "Show version",
+			db:          "Path of locate database file (default: /var/lib/mlocate)",
+			up:          "updatedb mode",
+			updb:        "Store only results of scanning the file system subtree rooted at PATH  to  the  generated  database.",
+			output:      "Write the database to DIRECTORY instead of using the default database directory.",
+			dryrun:      "Just print command, do NOT run updatedb command.",
+		}
+	)
 	flag.BoolVar(&showVersion, "v", false, usage.showVersion)
 	flag.BoolVar(&showVersion, "version", false, usage.showVersion)
 	flag.StringVar(&db, "d", "/var/lib/mlocate", usage.db)
@@ -140,18 +137,25 @@ Usage of gocate
 	if len(updb) < 1 { // updb default value
 		updb = arrayField{"/"}
 	}
-	return flag.Args() // options + search word
+	com := cmd.Command{
+		Args:   flag.Args(), // options + search word
+		Output: output,
+	}
+	return com
 }
 
 func main() {
+	var (
+		wg  = sync.WaitGroup{} // カウンタを宣言
+		com = flagParse()
+	)
+
 	// Check locate command
 	for _, c := range []string{"locate", "updatedb"} {
 		if _, err := exec.LookPath(c); err != nil {
 			panic(err)
 		}
 	}
-	com.Args = flagParse() // 先に実行しないとoutputとかのフラグ読み込まれない
-	com.Output = output
 
 	// Run updatedb
 	if up { // <= $ gocate -init -U /usr -U /etc

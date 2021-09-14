@@ -27,13 +27,15 @@ func BenchmarkParallelLocate(b *testing.B) {
 }
 
 func TestMain(t *testing.T) {
-	var wg = sync.WaitGroup{}
-	com = cmd.Command{
-		Args: []string{"--regex", "'lib.*id$'"},
-	}
-	c := make(chan string)
+	var (
+		wg  = sync.WaitGroup{}
+		com = cmd.Command{
+			Args: []string{"--regex", "'lib.*id$'"},
+		}
+		ch = make(chan string)
+	)
 
-	go cmd.Receiver(c)
+	go cmd.Receiver(ch)
 	dd := []string{
 		"test/etc.db",
 		"test/var.db",
@@ -41,7 +43,11 @@ func TestMain(t *testing.T) {
 	}
 	for _, d := range dd {
 		wg.Add(1)
-		go com.Locate(d)
+		go func(d string, ch chan string) {
+			defer wg.Done()
+			c := com.Locate(d)
+			cmd.Run(*c, ch)
+		}(d, ch)
 	}
 	wg.Wait()
 }
