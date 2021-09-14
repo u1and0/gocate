@@ -83,17 +83,17 @@ func flagParse() cmd.Command {
 		showVersion bool
 		usage       = usageText{
 			showVersion: "Show version",
-			db:          "Path of locate database file (default: /var/lib/mlocate)",
+			db:          "Path of locate database directory (default: /var/lib/mlocate)",
 			up:          "updatedb mode",
 			updb:        "Store only results of scanning the file system subtree rooted at PATH  to  the  generated  database.",
-			output:      "Write the database to DIRECTORY instead of using the default database directory.",
+			output:      "Write the database to DIRECTORY instead of using the default database directory. (default: /var/lib/mlocate)",
 			dryrun:      "Just print command, do NOT run updatedb command.",
 		}
 	)
 	flag.BoolVar(&showVersion, "v", false, usage.showVersion)
 	flag.BoolVar(&showVersion, "version", false, usage.showVersion)
-	flag.StringVar(&db, "d", "/var/lib/mlocate", usage.db)
-	flag.StringVar(&db, "database", "/var/lib/mlocate", usage.db)
+	flag.StringVar(&db, "d", DEFAULTDB, usage.db)
+	flag.StringVar(&db, "database", DEFAULTDB, usage.db)
 	flag.BoolVar(&up, "init", false, usage.up)
 	flag.Var(&updb, "U", usage.updb)
 	flag.Var(&updb, "database-root", usage.updb)
