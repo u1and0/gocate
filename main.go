@@ -190,10 +190,10 @@ func main() {
 		go func(d string, ch chan string) {
 			defer wg.Done() // go func抜けるときにカウンタを減算
 			c := com.Locate(d)
-			if dryrun {
-				fmt.Println(c)
-			} else {
+			if !dryrun {
 				cmd.Run(*c, ch)
+			} else {
+				fmt.Println(c)
 			}
 		}(d, c)
 	}
