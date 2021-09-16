@@ -7,7 +7,7 @@ import (
 )
 
 func TestUpdatedb(t *testing.T) {
-	com := Command{Gocatedbpath: "./.gocate"}
+	com := Command{Output: "/var/lib/mlocate"}
 	expected := fmt.Sprintf("%v",
 		exec.Command(
 			"updatedb",

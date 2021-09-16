@@ -16,7 +16,7 @@ type FileTree struct {
 
 // Updatedb generate command updatedb [OPTION]...
 func (com *Command) Updatedb(f string) *exec.Cmd {
-	opt := []string{"-U", f, "--output", path.Join(com.Gocatedbpath, replaceUnder(f)) + ".db"}
+	opt := []string{"-U", f, "--output", path.Join(com.Output, replaceUnder(f)) + ".db"}
 	opt = append(opt, com.Args...) // `updatedb` command other option
 	return exec.Command("updatedb", opt...)
 }

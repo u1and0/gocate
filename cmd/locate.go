@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"sync"
 )
 
 const (
@@ -17,10 +16,8 @@ const (
 type Command struct {
 	// Args : Search keyword and option
 	Args []string
-	// Wg : Waiting group for goroutine
-	Wg   sync.WaitGroup
-	// Gocatedbpath : Storing directory for updatedb database
-	Gocatedbpath string
+	// output : Storing directory for updatedb database
+	Output string
 }
 
 // Receiver : channel receiver
@@ -31,25 +28,28 @@ func Receiver(ch <-chan string) {
 			break
 		}
 		if BENCH {
-			continue
+			continue // Ignore print for benchmark test
 		}
 		fmt.Println(s)
 	}
 }
 
-// Exec : locate command executer
-func (c *Command) Exec(dir string, ch chan string) {
-	defer c.Wg.Done() // go func抜けるときにカウンタを減算
-
+// Locate : locate command generator
+func (c *Command) Locate(dir string) *exec.Cmd {
 	// locate command option read after -- from command line
 	opt := append([]string{"-d", dir}, c.Args...)
 	command := exec.Command("locate", opt...)
-	stdout, err := command.StdoutPipe()
+	return command
+}
+
+// Run : locate command executer write to channel
+func Run(c exec.Cmd, ch chan string) {
+	stdout, err := c.StdoutPipe()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	command.Start()
+	c.Start()
 
 	scanner := bufio.NewScanner(stdout)
 
@@ -59,4 +59,5 @@ func (c *Command) Exec(dir string, ch chan string) {
 			ch <- s
 		}
 	}
+
 }

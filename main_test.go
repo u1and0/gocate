@@ -1,9 +1,10 @@
 package main
 
 import (
-	cmd "gocate/cmd"
 	"sync"
 	"testing"
+
+	cmd "github.com/u1and0/gocate/cmd"
 )
 
 func BenchmarkNormalLocate(b *testing.B) {
@@ -26,23 +27,29 @@ func BenchmarkParallelLocate(b *testing.B) {
 }
 
 func TestMain(t *testing.T) {
-	com = cmd.Command{
-		Args: []string{"--regex", "'lib.*id$'"},
-		Wg:   sync.WaitGroup{},
-	}
-	c := make(chan string)
+	var (
+		wg  = sync.WaitGroup{}
+		com = cmd.Command{
+			Args: []string{"--regex", "'lib.*id$'"},
+		}
+		ch = make(chan string)
+	)
 
-	go cmd.Receiver(c)
+	go cmd.Receiver(ch)
 	dd := []string{
 		"test/etc.db",
 		"test/var.db",
 		"test/usr.db",
 	}
 	for _, d := range dd {
-		com.Wg.Add(1)
-		go com.Exec(d, c)
+		wg.Add(1)
+		go func(d string, ch chan string) {
+			defer wg.Done()
+			c := com.Locate(d)
+			cmd.Run(*c, ch)
+		}(d, ch)
 	}
-	com.Wg.Wait()
+	wg.Wait()
 }
 
 func Test_arrayFieldDbPath(t *testing.T) {
