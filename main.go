@@ -32,8 +32,6 @@ const (
 var (
 	// for normalLocate test default value
 	db string
-	// if not 0, limit output (or counting) to LIMIT entries
-	limit int
 	// updatedb mode flag
 	up bool
 	// updatedb path
@@ -49,7 +47,6 @@ type arrayField []string
 type usageText struct {
 	showVersion string
 	db          string
-	limit       string
 	up          string
 	updb        string
 	output      string
@@ -87,7 +84,6 @@ func flagParse() cmd.Command {
 		usage       = usageText{
 			showVersion: "Show version",
 			db:          "Path of locate database directory (default: /var/lib/mlocate)",
-			limit:       "limit output (or counting) to LIMIT entries",
 			up:          "updatedb mode",
 			updb:        "Store only results of scanning the file system subtree rooted at PATH  to  the  generated  database.",
 			output:      "Write the database to DIRECTORY instead of using the default database directory. (default: /var/lib/mlocate)",
@@ -98,9 +94,6 @@ func flagParse() cmd.Command {
 	flag.BoolVar(&showVersion, "version", false, usage.showVersion)
 	flag.StringVar(&db, "d", DEFAULTDB, usage.db)
 	flag.StringVar(&db, "database", DEFAULTDB, usage.db)
-	flag.IntVar(&limit, "l", 0, usage.limit)
-	flag.IntVar(&limit, "limit", 0, usage.limit)
-	flag.IntVar(&limit, "n", 0, usage.limit)
 	flag.BoolVar(&up, "init", false, usage.up)
 	flag.Var(&updb, "U", usage.updb)
 	flag.Var(&updb, "database-root", usage.updb)
@@ -117,8 +110,6 @@ Usage of gocate
 	%s
 -d, -database DIRECTORY
 	%s
--l, -limit, -n LIMIT
-	%s
 -init
 	%s
 -U, -database-root DIRECTORY
@@ -131,7 +122,6 @@ Usage of gocate
 	locate or updatedb command option`,
 			usage.showVersion,
 			usage.db,
-			usage.limit,
 			usage.up,
 			usage.updb,
 			usage.output,
