@@ -3,6 +3,7 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 )
@@ -43,13 +44,15 @@ func (c *Command) Locate(dir string) *exec.Cmd {
 }
 
 // Run : locate command executer write to channel
-func Run(c exec.Cmd, ch chan string) {
-	stdout, err := c.StdoutPipe()
+func Run(cmd exec.Cmd, ch chan string) {
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	c.Start()
+	if err := cmd.Start(); err != nil { // execute `locate`
+		log.Fatal(err)
+	}
 
 	scanner := bufio.NewScanner(stdout)
 
@@ -59,5 +62,4 @@ func Run(c exec.Cmd, ch chan string) {
 			ch <- s
 		}
 	}
-
 }

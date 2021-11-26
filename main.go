@@ -24,7 +24,7 @@ const (
 	// BENCH : Benchmark test flag
 	BENCH = false
 	// VERSION : Show version flag
-	VERSION = "v0.3.0"
+	VERSION = "v0.3.0r"
 	// DEFAULTDB : Default locate search path
 	DEFAULTDB = "/var/lib/mlocate/"
 )
@@ -98,9 +98,9 @@ func flagParse() cmd.Command {
 	flag.BoolVar(&showVersion, "version", false, usage.showVersion)
 	flag.StringVar(&db, "d", DEFAULTDB, usage.db)
 	flag.StringVar(&db, "database", DEFAULTDB, usage.db)
-	flag.IntVar(&limit, "l", 0, usage.limit)
-	flag.IntVar(&limit, "limit", 0, usage.limit)
-	flag.IntVar(&limit, "n", 0, usage.limit)
+	flag.IntVar(&limit, "l", -1, usage.limit)
+	flag.IntVar(&limit, "limit", -1, usage.limit)
+	flag.IntVar(&limit, "n", -1, usage.limit)
 	flag.BoolVar(&up, "init", false, usage.up)
 	flag.Var(&updb, "U", usage.updb)
 	flag.Var(&updb, "database-root", usage.updb)
