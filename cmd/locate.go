@@ -37,7 +37,7 @@ func Receiver(ch <-chan string) {
 // Locate : locate command generator
 func (c *Command) Locate(dir string) *exec.Cmd {
 	// locate command option read after -- from command line
-	opt := append([]string{"-d", dir}, c.Args...)
+	opt := append([]string{"-d", dir}, remove(c.Args, "--")...)
 	command := exec.Command("locate", opt...)
 	return command
 }
@@ -60,4 +60,14 @@ func Run(c exec.Cmd, ch chan string) {
 		}
 	}
 
+}
+
+// remove specified string from string array
+func remove(ss []string, s string) []string {
+	for i, v := range ss {
+		if v == s {
+			return append(ss[:i], ss[i+1:]...)
+		}
+	}
+	return ss
 }
