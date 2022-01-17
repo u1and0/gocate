@@ -75,7 +75,7 @@ func Run(c exec.Cmd, ch chan string) error {
 	if err := c.Wait(); err != nil {
 		return err
 	}
-	return err
+	return nil
 }
 
 // remove specified string from string array
