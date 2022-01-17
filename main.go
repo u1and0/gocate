@@ -24,7 +24,7 @@ const (
 	// BENCH : Benchmark test flag
 	BENCH = false
 	// VERSION : Show version flag
-	VERSION = "v0.3.1"
+	VERSION = "v0.3.1r"
 	// DEFAULTDB : Default locate search path
 	DEFAULTDB = "/var/lib/mlocate/"
 )
@@ -167,7 +167,8 @@ func main() {
 				fmt.Println(c)
 				if !dryrun {
 					if err := c.Run(); err != nil {
-						panic(err)
+						fmt.Printf("%v", err)
+						os.Exit(1)
 					}
 				}
 			}(dir)
@@ -191,7 +192,10 @@ func main() {
 			defer wg.Done() // go func抜けるときにカウンタを減算
 			c := com.Locate(d)
 			if !dryrun {
-				cmd.Run(*c, ch)
+				if err := cmd.Run(*c, ch); err != nil {
+					fmt.Printf("%v", err)
+					os.Exit(1)
+				}
 			} else {
 				fmt.Println(c)
 			}

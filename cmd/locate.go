@@ -2,8 +2,9 @@ package cmd
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
-	"os"
+	"io"
 	"os/exec"
 )
 
@@ -43,13 +44,16 @@ func (c *Command) Locate(dir string) *exec.Cmd {
 }
 
 // Run : locate command executer write to channel
-func Run(c exec.Cmd, ch chan string) {
+func Run(c exec.Cmd, ch chan string) error {
 	stdout, err := c.StdoutPipe()
+	stderr, err := c.StderrPipe()
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return err
 	}
-	c.Start()
+	// Command execute
+	if err := c.Start(); err != nil {
+		return err
+	}
 
 	scanner := bufio.NewScanner(stdout)
 
@@ -60,6 +64,18 @@ func Run(c exec.Cmd, ch chan string) {
 		}
 	}
 
+	// Command Error handling
+	// go func() {
+	b, _ := io.ReadAll(stderr)
+	if err = errors.New(string(b)); err != nil {
+		return err
+	}
+	// }()
+
+	if err := c.Wait(); err != nil {
+		return err
+	}
+	return err
 }
 
 // remove specified string from string array
