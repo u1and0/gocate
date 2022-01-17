@@ -70,7 +70,8 @@ func (a *arrayField) Dbpath() (dd []string) {
 	for _, pairent := range *a { // a = arrayField{"/usr", "/etc"}
 		dirs, err := ioutil.ReadDir(pairent) // => fs.FileInfo{ lib, bin, ... }
 		if err != nil {
-			panic(err)
+			fmt.Println(err)
+			os.Exit(1)
 		}
 		ft := cmd.FileTree{Pairent: pairent, Dirs: dirs} // ft = /usr/bin /usr/lib ... ( []fs.FileInfo )
 		dd = ft.DirectoryFilter(dd)
@@ -153,7 +154,8 @@ func main() {
 	// Check locate command
 	for _, c := range []string{"locate", "updatedb"} {
 		if _, err := exec.LookPath(c); err != nil {
-			panic(err)
+			fmt.Println(err)
+			os.Exit(1)
 		}
 	}
 
@@ -184,7 +186,8 @@ func main() {
 	go cmd.Receiver(c)
 	dbs, err := filepath.Glob(db + "/*.db")
 	if err != nil {
-		panic(nil)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 	for _, d := range dbs {
 		wg.Add(1) // カウンタの追加はLocate()の外でないとすぐ終わる
