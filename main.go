@@ -24,7 +24,7 @@ const (
 	// BENCH : Benchmark test flag
 	BENCH = false
 	// VERSION : Show version flag
-	VERSION = "v0.3.1"
+	VERSION = "v0.3.2"
 	// DEFAULTDB : Default locate search path
 	DEFAULTDB = "/var/lib/mlocate/"
 )
@@ -70,7 +70,8 @@ func (a *arrayField) Dbpath() (dd []string) {
 	for _, pairent := range *a { // a = arrayField{"/usr", "/etc"}
 		dirs, err := ioutil.ReadDir(pairent) // => fs.FileInfo{ lib, bin, ... }
 		if err != nil {
-			panic(err)
+			fmt.Println(err)
+			os.Exit(1)
 		}
 		ft := cmd.FileTree{Pairent: pairent, Dirs: dirs} // ft = /usr/bin /usr/lib ... ( []fs.FileInfo )
 		dd = ft.DirectoryFilter(dd)
@@ -153,7 +154,8 @@ func main() {
 	// Check locate command
 	for _, c := range []string{"locate", "updatedb"} {
 		if _, err := exec.LookPath(c); err != nil {
-			panic(err)
+			fmt.Println(err)
+			os.Exit(1)
 		}
 	}
 
@@ -167,7 +169,8 @@ func main() {
 				fmt.Println(c)
 				if !dryrun {
 					if err := c.Run(); err != nil {
-						panic(err)
+						fmt.Printf("%v", err)
+						os.Exit(1)
 					}
 				}
 			}(dir)
@@ -183,7 +186,8 @@ func main() {
 	go cmd.Receiver(c)
 	dbs, err := filepath.Glob(db + "/*.db")
 	if err != nil {
-		panic(nil)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 	for _, d := range dbs {
 		wg.Add(1) // カウンタの追加はLocate()の外でないとすぐ終わる
@@ -191,7 +195,10 @@ func main() {
 			defer wg.Done() // go func抜けるときにカウンタを減算
 			c := com.Locate(d)
 			if !dryrun {
-				cmd.Run(*c, ch)
+				if err := cmd.Run(*c, ch); err != nil {
+					fmt.Printf("%v", err)
+					os.Exit(1)
+				}
 			} else {
 				fmt.Println(c)
 			}
