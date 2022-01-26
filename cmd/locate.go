@@ -65,16 +65,13 @@ func Run(c exec.Cmd, ch chan string) error {
 	}
 
 	// Command Error handling
-	// go func() {
 	b, _ := io.ReadAll(stderr)
-	if err = errors.New(string(b)); err != nil {
+	if s := string(b); s != "" {
+		err = errors.New(s)
 		return err
 	}
-	// }()
 
-	if err := c.Wait(); err != nil {
-		return err
-	}
+	c.Wait()
 	return nil
 }
 

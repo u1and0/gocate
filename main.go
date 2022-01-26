@@ -24,7 +24,7 @@ const (
 	// BENCH : Benchmark test flag
 	BENCH = false
 	// VERSION : Show version flag
-	VERSION = "v0.3.2"
+	VERSION = "v0.3.3"
 	// DEFAULTDB : Default locate search path
 	DEFAULTDB = "/var/lib/mlocate/"
 )
